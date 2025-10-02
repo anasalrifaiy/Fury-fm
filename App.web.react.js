@@ -199,14 +199,6 @@ const FootballManagerPro = () => {
               const opponentId = isChallenger ? matchData.player2 : matchData.player1;
               const opponentName = isChallenger ? matchData.player2Name : matchData.player1Name;
 
-              // Mark the challenger (player1) as ready when they get notified of acceptance
-              if (isChallenger) {
-                await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
-                  player1Ready: true
-                });
-                setMatchReadyState(prev => ({ ...prev, player1Ready: true }));
-              }
-
               // Set up match simulation data
               const mySquad = Object.keys(formationPlayers).length >= 11 ? formationPlayers :
                               squad.slice(0, 11).reduce((acc, player, index) => {
@@ -232,9 +224,23 @@ const FootballManagerPro = () => {
               setCurrentMinute(0);
               setIsMatchPlaying(false);
 
-              // Navigate to match screen and notify
-              setCurrentScreen('match');
-              alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
+              // Mark the challenger (player1) as ready when they get notified of acceptance
+              if (isChallenger) {
+                await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
+                  player1Ready: true
+                });
+                setMatchReadyState({
+                  player1Ready: true,
+                  player2Ready: data.player2Ready
+                });
+
+                // Navigate to match screen and notify
+                setCurrentScreen('match');
+                alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
+              } else {
+                // For the accepter, just navigate to match screen
+                setCurrentScreen('match');
+              }
             }
           }
 
