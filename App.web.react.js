@@ -182,24 +182,36 @@ const FootballManagerPro = () => {
         const simDoc = await simulationDoc.get();
         if (simDoc.exists) {
           const data = simDoc.data();
-          setMatchReadyState({
-            player1Ready: data.player1Ready,
-            player2Ready: data.player2Ready
-          });
 
-          // If this is the first time we see simulation data, it means challenge was accepted
-          if (!matchSimulation) {
-            // Get match info to determine opponent
-            const mainMatchDoc = await matchDoc.get();
-            if (mainMatchDoc.exists) {
-              const matchData = mainMatchDoc.data();
-              // If current user is player1 (challenger), opponent is player2
-              // If current user is player2 (accepter), opponent is player1
-              const isChallenger = matchData.player1 === user.uid;
-              const opponentId = isChallenger ? matchData.player2 : matchData.player1;
-              const opponentName = isChallenger ? matchData.player2Name : matchData.player1Name;
+          // Get match info to determine roles
+          const mainMatchDoc = await matchDoc.get();
+          if (mainMatchDoc.exists) {
+            const matchData = mainMatchDoc.data();
+            const isChallenger = matchData.player1 === user.uid;
+            const opponentId = isChallenger ? matchData.player2 : matchData.player1;
+            const opponentName = isChallenger ? matchData.player2Name : matchData.player1Name;
 
-              // Set up match simulation data
+            // Auto-mark challenger as ready if they aren't already
+            if (isChallenger && !data.player1Ready) {
+              await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
+                player1Ready: true
+              });
+              // Re-fetch the updated data
+              const updatedDoc = await simulationDoc.get();
+              const updatedData = updatedDoc.data();
+              setMatchReadyState({
+                player1Ready: updatedData.player1Ready,
+                player2Ready: updatedData.player2Ready
+              });
+            } else {
+              setMatchReadyState({
+                player1Ready: data.player1Ready,
+                player2Ready: data.player2Ready
+              });
+            }
+
+            // If this is the first time we see simulation data, set up match simulation
+            if (!matchSimulation) {
               const mySquad = Object.keys(formationPlayers).length >= 11 ? formationPlayers :
                               squad.slice(0, 11).reduce((acc, player, index) => {
                                 acc[`position_${index}`] = player;
@@ -223,29 +235,17 @@ const FootballManagerPro = () => {
               setMatchEvents([]);
               setCurrentMinute(0);
               setIsMatchPlaying(false);
+              setCurrentScreen('match');
 
-              // Mark the challenger (player1) as ready when they get notified of acceptance
               if (isChallenger) {
-                await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
-                  player1Ready: true
-                });
-                setMatchReadyState({
-                  player1Ready: true,
-                  player2Ready: data.player2Ready
-                });
-
-                // Navigate to match screen and notify
-                setCurrentScreen('match');
                 alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
-              } else {
-                // For the accepter, just navigate to match screen
-                setCurrentScreen('match');
               }
             }
           }
 
-          // If both players are ready, auto-start the match after a short delay
-          if (data.player1Ready && data.player2Ready && !isMatchPlaying && currentMinute === 0) {
+          // Check if both players are ready using the most current state
+          const currentReadyState = matchReadyState || { player1Ready: data.player1Ready, player2Ready: data.player2Ready };
+          if (currentReadyState.player1Ready && currentReadyState.player2Ready && !isMatchPlaying && currentMinute === 0) {
             clearInterval(pollInterval);
             setTimeout(() => {
               alert('Both players are ready! Match starting now...');
@@ -1357,9 +1357,8 @@ const FootballManagerPro = () => {
           <h1>
           <span className="logo-icon">
             <span className="football-icon">⚽</span>
-            <span className="crown-icon">👑</span>
           </span>
-          Football Manager Pro
+          Fury FM
         </h1>
           <div className="auth-tabs">
             <button
@@ -1831,11 +1830,38 @@ const FootballManagerPro = () => {
         </div>
       </div>
     ),
-    leaderboard: () => (
-      <div className="screen">
-        <h2>Leaderboard</h2>
-        <div className="leaderboard-list">
-          {leaderboardManagers.map((manager, index) => (
+    leaderboard: () => {
+      const refreshLeaderboard = async () => {
+        try {
+          const usersCollection = await firestore().collection('users').get();
+          const users = usersCollection.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+          setAllUsers(users);
+        } catch (error) {
+          console.error('Error refreshing leaderboard:', error);
+        }
+      };
+
+      // Sort leaderboard by points (wins*3 + draws*1) then by wins
+      const sortedManagers = [...leaderboardManagers].sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return b.wins - a.wins;
+      });
+
+      return (
+        <div className="screen">
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h2>Leaderboard</h2>
+            <button onClick={refreshLeaderboard} style={{padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}}>
+              🔄 Refresh
+            </button>
+          </div>
+          {sortedManagers.length === 0 && (
+            <div style={{textAlign: 'center', color: '#666', padding: '20px'}}>
+              No users found. Click refresh to load leaderboard.
+            </div>
+          )}
+          <div className="leaderboard-list">
+            {sortedManagers.map((manager, index) => (
             <div key={manager.id} className={`rank-item ${manager.isCurrentUser ? 'current' : ''}`}>
               <span className="rank">{index + 1}</span>
               <div className="manager-info">
@@ -1881,7 +1907,8 @@ const FootballManagerPro = () => {
           ))}
         </div>
       </div>
-    ),
+      );
+    },
     profile: () => (
       <div className="screen profile-container">
         <div className="profile-card">
@@ -2422,12 +2449,11 @@ const FootballManagerPro = () => {
         <h1>
           <span className="logo-icon">
             <span className="football-icon">⚽</span>
-            <span className="crown-icon">👑</span>
           </span>
-          Football Manager Pro
+          Fury FM
         </h1>
         <div className="header-info">
-          <span>💰 ${(user.budget || 0).toLocaleString()}</span>
+          <span style={{fontSize: '14px'}}>💰 ${(user.budget || 0).toLocaleString()}</span>
           <span>🏆 {user.trophies}</span>
           <button
             className="bell-btn"
