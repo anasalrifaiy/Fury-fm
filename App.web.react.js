@@ -35,6 +35,8 @@ const FootballManagerPro = () => {
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState(null);
   const [matchHistory, setMatchHistory] = useState([]);
+  const [matchReadyState, setMatchReadyState] = useState(null); // Track if both players are ready
+  const [currentMatchId, setCurrentMatchId] = useState(null); // Track current match ID for listener
 
   // Firebase auth state listener
   useEffect(() => {
@@ -142,6 +144,18 @@ const FootballManagerPro = () => {
           setMatchHistory(JSON.parse(savedHistory));
         }
 
+        // Load all users for leaderboard using Firestore mock
+        const loadAllUsers = async () => {
+          try {
+            const usersCollection = await firestore().collection('users').get();
+            const users = usersCollection.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+            setAllUsers(users);
+          } catch (error) {
+            console.error('Error loading users for leaderboard:', error);
+          }
+        };
+        loadAllUsers();
+
         setCurrentScreen('dashboard');
       } else {
         // User is logged out
@@ -153,6 +167,41 @@ const FootballManagerPro = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Real-time listener for match ready states
+  useEffect(() => {
+    if (!currentMatchId || !user) return;
+
+    const matchDoc = firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data');
+
+    // For web version, we'll poll for updates since real-time listeners aren't implemented in the mock
+    const pollInterval = setInterval(async () => {
+      try {
+        const doc = await matchDoc.get();
+        if (doc.exists) {
+          const data = doc.data();
+          setMatchReadyState({
+            player1Ready: data.player1Ready,
+            player2Ready: data.player2Ready
+          });
+
+          // If both players are ready, auto-start the match after a short delay
+          if (data.player1Ready && data.player2Ready && !isMatchPlaying && currentMinute === 0) {
+            clearInterval(pollInterval);
+            setTimeout(() => {
+              alert('Both players are ready! Match starting now...');
+              startMatch();
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling match ready state:', error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [currentMatchId, user, isMatchPlaying, currentMinute]);
+
   // Helper function to calculate realistic player values based on rating
   const calculatePlayerValue = (rating, age = 25) => {
     let baseValue;
@@ -467,55 +516,217 @@ const FootballManagerPro = () => {
 
     let myGoals = 0;
     let oppGoals = 0;
+    let myYellowCards = 0;
+    let oppYellowCards = 0;
+    let myRedCards = 0;
+    let oppRedCards = 0;
+    let myShots = 0;
+    let oppShots = 0;
+    let myShotsOnTarget = 0;
+    let oppShotsOnTarget = 0;
+    let myCorners = 0;
+    let oppCorners = 0;
+    let myFouls = 0;
+    let oppFouls = 0;
 
-    for (let minute = 1; minute <= 90; minute += Math.floor(Math.random() * 15) + 5) {
-      if (Math.random() < 0.15) {
-        const isMyGoal = Math.random() < (myRating / (myRating + oppRating));
-        const scorer = isMyGoal ?
-          mySquadArray[Math.floor(Math.random() * mySquadArray.length)] :
-          opponentSquadArray[Math.floor(Math.random() * opponentSquadArray.length)];
+    // Enhanced event generation with more realistic timeline
+    for (let minute = 1; minute <= 90; minute++) {
+      // Increase event probability in key periods
+      let eventChance = 0.12; // Base 12% chance per minute
+      if (minute <= 10 || minute >= 80) eventChance = 0.18; // Higher chance early/late
+      if (minute >= 45 && minute <= 50) eventChance = 0.15; // Halftime pressure
 
-        if (isMyGoal) {
-          myGoals++;
+      if (Math.random() < eventChance) {
+        const teamAdvantage = myRating / (myRating + oppRating);
+        const isMyTeam = Math.random() < teamAdvantage;
+
+        const team = isMyTeam ? 'home' : 'away';
+        const teamName = isMyTeam ? 'Your team' : opponentName;
+        const squad = isMyTeam ? mySquadArray : opponentSquadArray;
+        const player = squad[Math.floor(Math.random() * squad.length)];
+
+        // Event type probabilities
+        const rand = Math.random();
+
+        if (rand < 0.08) { // 8% - Goals
+          const isOnTarget = Math.random() < 0.7; // 70% shots on target
+          if (isMyTeam) {
+            myShots++;
+            if (isOnTarget) myShotsOnTarget++;
+          } else {
+            oppShots++;
+            if (isOnTarget) oppShotsOnTarget++;
+          }
+
+          if (isOnTarget && Math.random() < 0.25) { // 25% of shots on target are goals
+            if (isMyTeam) {
+              myGoals++;
+              events.push({
+                minute,
+                type: 'goal',
+                team,
+                player: player.name,
+                text: `⚽ GOAL! ${player.name} finds the back of the net! What a strike!`,
+                icon: '⚽'
+              });
+            } else {
+              oppGoals++;
+              events.push({
+                minute,
+                type: 'goal',
+                team,
+                player: player.name,
+                text: `⚽ Goal for ${opponentName}! ${player.name} scores against you.`,
+                icon: '⚽'
+              });
+            }
+          } else if (isOnTarget) {
+            events.push({
+              minute,
+              type: 'save',
+              team,
+              player: player.name,
+              text: `🧤 Great save! ${player.name}'s shot is denied by the goalkeeper.`,
+              icon: '🧤'
+            });
+          } else {
+            events.push({
+              minute,
+              type: 'shot_off_target',
+              team,
+              player: player.name,
+              text: `📤 ${player.name} shoots wide of the goal. Close attempt!`,
+              icon: '📤'
+            });
+          }
+        } else if (rand < 0.12) { // 4% - Cards
+          if (Math.random() < 0.85) { // 85% yellow cards
+            events.push({
+              minute,
+              type: 'yellow_card',
+              team,
+              player: player.name,
+              text: `🟨 Yellow card for ${player.name} - ${isMyTeam ? 'your player' : teamName} needs to be careful!`,
+              icon: '🟨'
+            });
+            if (isMyTeam) myYellowCards++; else oppYellowCards++;
+          } else { // 15% red cards
+            events.push({
+              minute,
+              type: 'red_card',
+              team,
+              player: player.name,
+              text: `🟥 RED CARD! ${player.name} is sent off! ${isMyTeam ? 'You are' : teamName + ' is'} down to 10 men!`,
+              icon: '🟥'
+            });
+            if (isMyTeam) myRedCards++; else oppRedCards++;
+          }
+        } else if (rand < 0.16) { // 4% - Corners
           events.push({
             minute,
-            type: 'goal',
-            team: 'home',
-            player: scorer.name,
-            text: `⚽ GOAL! ${scorer.name} scores for your team!`
+            type: 'corner',
+            team,
+            player: player.name,
+            text: `⚽ Corner kick for ${isMyTeam ? 'your team' : teamName}. ${player.name} to take it.`,
+            icon: '⚽'
           });
-        } else {
-          oppGoals++;
+          if (isMyTeam) myCorners++; else oppCorners++;
+        } else if (rand < 0.25) { // 9% - Fouls
           events.push({
             minute,
-            type: 'goal',
-            team: 'away',
-            player: scorer.name,
-            text: `⚽ Goal for ${opponentName} by ${scorer.name}`
+            type: 'foul',
+            team,
+            player: player.name,
+            text: `⚠️ Foul by ${player.name}. Free kick awarded to ${isMyTeam ? opponentName : 'your team'}.`,
+            icon: '⚠️'
+          });
+          if (isMyTeam) myFouls++; else oppFouls++;
+        } else if (rand < 0.35) { // 10% - Key plays
+          const playTypes = [
+            { type: 'key_pass', text: `🎯 Brilliant pass by ${player.name}! Creates a great opportunity.`, icon: '🎯' },
+            { type: 'tackle', text: `💪 Strong tackle from ${player.name}! Wins the ball back.`, icon: '💪' },
+            { type: 'interception', text: `🛡️ ${player.name} intercepts the pass! Good defensive work.`, icon: '🛡️' },
+            { type: 'dribble', text: `⚡ ${player.name} beats his marker with skillful dribbling!`, icon: '⚡' }
+          ];
+          const play = playTypes[Math.floor(Math.random() * playTypes.length)];
+          events.push({
+            minute,
+            type: play.type,
+            team,
+            player: player.name,
+            text: play.text,
+            icon: play.icon
+          });
+        } else { // 65% - Regular play events
+          const regularEvents = [
+            { type: 'pass', text: `${player.name} keeps possession with a solid pass.` },
+            { type: 'cross', text: `${player.name} delivers a cross into the box.` },
+            { type: 'clearance', text: `${player.name} clears the danger away.` },
+            { type: 'throw_in', text: `Throw-in for ${isMyTeam ? 'your team' : teamName}.` }
+          ];
+          const event = regularEvents[Math.floor(Math.random() * regularEvents.length)];
+          events.push({
+            minute,
+            type: event.type,
+            team,
+            player: player.name,
+            text: event.text,
+            icon: '⚽'
           });
         }
-      } else if (Math.random() < 0.3) {
-        const isMyTeam = Math.random() < 0.5;
-        const player = isMyTeam ?
-          mySquadArray[Math.floor(Math.random() * mySquadArray.length)] :
-          opponentSquadArray[Math.floor(Math.random() * opponentSquadArray.length)];
+      }
 
-        const eventTypes = ['shot', 'pass', 'tackle', 'save'];
-        const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-
+      // Add halftime break
+      if (minute === 45) {
         events.push({
-          minute,
-          type: eventType,
-          team: isMyTeam ? 'home' : 'away',
-          player: player.name,
-          text: `${minute}' - ${player.name} ${eventType === 'shot' ? 'takes a shot' :
-                 eventType === 'pass' ? 'makes a great pass' :
-                 eventType === 'tackle' ? 'makes a tackle' : 'makes a save'}`
+          minute: 45,
+          type: 'halftime',
+          team: 'neutral',
+          player: 'Referee',
+          text: '⏱️ HALF TIME - The teams head to the dressing rooms.',
+          icon: '⏱️'
         });
       }
     }
 
-    return { events, myGoals, oppGoals };
+    // Add injury time if needed
+    if (Math.random() < 0.7) {
+      const injuryTime = Math.floor(Math.random() * 5) + 1;
+      events.push({
+        minute: 90,
+        type: 'injury_time',
+        team: 'neutral',
+        player: 'Referee',
+        text: `⏱️ ${injuryTime} minutes of injury time added.`,
+        icon: '⏱️'
+      });
+    }
+
+    // Add match statistics
+    const matchStats = {
+      myStats: {
+        shots: myShots,
+        shotsOnTarget: myShotsOnTarget,
+        goals: myGoals,
+        corners: myCorners,
+        fouls: myFouls,
+        yellowCards: myYellowCards,
+        redCards: myRedCards,
+        possession: Math.round(40 + (myRating / (myRating + oppRating)) * 20) // 40-60% based on team rating
+      },
+      oppStats: {
+        shots: oppShots,
+        shotsOnTarget: oppShotsOnTarget,
+        goals: oppGoals,
+        corners: oppCorners,
+        fouls: oppFouls,
+        yellowCards: oppYellowCards,
+        redCards: oppRedCards,
+        possession: Math.round(40 + (oppRating / (myRating + oppRating)) * 20)
+      }
+    };
+
+    return { events, myGoals, oppGoals, matchStats };
   };
 
   const handleAcceptMatch = async (matchId, opponentId, opponentName) => {
@@ -528,29 +739,59 @@ const FootballManagerPro = () => {
                         return acc;
                       }, {});
 
-      // For opponent, we'll simulate a squad from the available players
-      // In real implementation, this would fetch their actual formation
-      const opponentSquad = squad.slice(0, 11).reduce((acc, player, index) => {
-        acc[`position_${index}`] = {
-          ...player,
-          name: `${opponentName} Player ${index + 1}`,
-          rating: Math.floor(Math.random() * 20) + 70 // Random rating 70-90
-        };
-        return acc;
-      }, {});
-
       if (!validateSquad(mySquad)) {
         alert('You need exactly 11 players in your formation to start a match! Please go to the Formation tab and complete your squad.');
         setCurrentScreen('formation'); // Navigate to formation screen
         return;
       }
 
-      if (!validateSquad(opponentSquad)) {
-        alert(`${opponentName} doesn't have a complete squad (11 players). Match cannot start.`);
-        return;
+      // Check if match simulation already exists (for synchronization)
+      const matchDoc = await firestore().collection('matches').doc(matchId).collection('simulation').doc('data').get();
+
+      let matchData;
+      let opponentSquad;
+
+      if (matchDoc.exists) {
+        // Match simulation already exists, use the stored data
+        const existingData = matchDoc.data();
+        matchData = existingData;
+        opponentSquad = existingData.opponentSquad;
+        console.log('Using existing match simulation data for synchronization');
+      } else {
+        // Create new match simulation and store it for synchronization
+        opponentSquad = squad.slice(0, 11).reduce((acc, player, index) => {
+          acc[`position_${index}`] = {
+            ...player,
+            name: `${opponentName} Player ${index + 1}`,
+            rating: Math.floor(Math.random() * 20) + 70 // Random rating 70-90
+          };
+          return acc;
+        }, {});
+
+        if (!validateSquad(opponentSquad)) {
+          alert(`${opponentName} doesn't have a complete squad (11 players). Match cannot start.`);
+          return;
+        }
+
+        matchData = generateMatchEvents(mySquad, opponentSquad, matchId, opponentName);
+
+        // Store the match simulation for synchronization
+        await firestore().collection('matches').doc(matchId).collection('simulation').doc('data').set({
+          ...matchData,
+          opponentSquad,
+          createdAt: new Date().toISOString(),
+          player1Ready: false,
+          player2Ready: false
+        });
+
+        console.log('Created new synchronized match simulation');
       }
 
-      const matchData = generateMatchEvents(mySquad, opponentSquad, matchId, opponentName);
+      // Mark this player as ready
+      const playerReadyField = user.uid === opponentId ? 'player1Ready' : 'player2Ready';
+      await firestore().collection('matches').doc(matchId).collection('simulation').doc('data').update({
+        [playerReadyField]: true
+      });
 
       setMatchSimulation({
         matchId,
@@ -562,13 +803,18 @@ const FootballManagerPro = () => {
         finalScore: {
           home: matchData.myGoals,
           away: matchData.oppGoals
-        }
+        },
+        matchStats: matchData.matchStats
       });
 
       setMatchEvents([]);
       setCurrentMinute(0);
       setIsMatchPlaying(false);
+      setMatchReadyState({ [playerReadyField]: true });
+      setCurrentMatchId(matchId); // Set current match ID for listener
       setCurrentScreen('match');
+
+      alert('Match accepted! Waiting for both players to be ready to start...');
 
     } catch (error) {
       alert(`Failed to start match: ${error.message}`);
@@ -602,13 +848,13 @@ const FootballManagerPro = () => {
         if (nextMinute >= 90) {
           clearInterval(interval);
           setIsMatchPlaying(false);
-          setTimeout(() => finishMatch(), 2000);
+          setTimeout(() => finishMatch(), 3000);
           return 90;
         }
 
         return nextMinute;
       });
-    }, 100);
+    }, 2000); // 2 seconds per minute = 3 minutes total match time
   };
 
   const finishMatch = async () => {
@@ -642,14 +888,31 @@ const FootballManagerPro = () => {
       }
       // No money for losses
 
-      // Update user budget if there's a reward
-      if (rewardMoney > 0) {
-        const newBudget = user.budget + rewardMoney;
-        setUser(prev => ({ ...prev, budget: newBudget }));
-        await updateUserProfile(user.uid, { budget: newBudget });
+      // Update user stats and budget
+      const currentWins = user.wins || 0;
+      const currentDraws = user.draws || 0;
+      const currentLosses = user.losses || 0;
+
+      let newStats = { budget: user.budget };
+
+      if (matchResult.winner === 'player2') {
+        // Player won
+        newStats.wins = currentWins + 1;
+        newStats.budget = user.budget + rewardMoney;
+      } else if (matchResult.winner === 'draw') {
+        // Draw
+        newStats.draws = currentDraws + 1;
+        newStats.budget = user.budget + rewardMoney;
+      } else {
+        // Player lost
+        newStats.losses = currentLosses + 1;
       }
 
-      // Add match to history
+      // Update local state and Firebase
+      setUser(prev => ({ ...prev, ...newStats }));
+      await updateUserProfile(user.uid, newStats);
+
+      // Add match to history with detailed statistics
       const newMatchRecord = {
         id: matchSimulation.matchId,
         date: new Date().toISOString(),
@@ -657,7 +920,31 @@ const FootballManagerPro = () => {
         homeScore: matchSimulation.finalScore.home,
         awayScore: matchSimulation.finalScore.away,
         result: matchResult.winner === 'player2' ? 'W' : matchResult.winner === 'draw' ? 'D' : 'L',
-        reward: rewardMoney
+        reward: rewardMoney,
+        // Add detailed match statistics
+        stats: matchSimulation.matchStats || {
+          myStats: {
+            shots: Math.floor(Math.random() * 15) + 5,
+            shotsOnTarget: Math.floor(Math.random() * 8) + 2,
+            goals: matchSimulation.finalScore.home,
+            corners: Math.floor(Math.random() * 8) + 2,
+            fouls: Math.floor(Math.random() * 10) + 5,
+            yellowCards: Math.floor(Math.random() * 3),
+            redCards: Math.floor(Math.random() * 2),
+            possession: Math.floor(Math.random() * 20) + 40
+          },
+          oppStats: {
+            shots: Math.floor(Math.random() * 15) + 5,
+            shotsOnTarget: Math.floor(Math.random() * 8) + 2,
+            goals: matchSimulation.finalScore.away,
+            corners: Math.floor(Math.random() * 8) + 2,
+            fouls: Math.floor(Math.random() * 10) + 5,
+            yellowCards: Math.floor(Math.random() * 3),
+            redCards: Math.floor(Math.random() * 2),
+            possession: Math.floor(Math.random() * 20) + 40
+          }
+        },
+        events: matchSimulation.events || []
       };
 
       const updatedHistory = [newMatchRecord, ...matchHistory].slice(0, 20); // Keep last 20 matches
@@ -668,6 +955,8 @@ const FootballManagerPro = () => {
 
       setIncomingMatches(prev => prev.filter(match => match.id !== matchSimulation.matchId));
       setMatchSimulation(null);
+      setCurrentMatchId(null); // Reset current match ID to stop listener
+      setMatchReadyState(null); // Reset match ready state
       setCurrentScreen('alerts');
 
     } catch (error) {
@@ -795,41 +1084,40 @@ const FootballManagerPro = () => {
   };
 
   // Mock manager data for leaderboard
+  // Real users leaderboard (will be populated with actual Firebase users)
+  const [allUsers, setAllUsers] = useState([]);
+
   const leaderboardManagers = [
     {
-      id: '1',
+      id: user?.uid || '1',
       name: user?.name || 'Player',
       clubName: user?.clubName || 'My Club',
-      points: 1800,
+      points: (user?.wins || 0) * 3 + (user?.draws || 0) * 1, // Calculate points from match results
       isCurrentUser: true,
       level: user?.level || 1,
       budget: user?.budget || 0,
       trophies: user?.trophies || 0,
+      wins: user?.wins || 0,
+      draws: user?.draws || 0,
+      losses: user?.losses || 0,
       squad: squad.slice(0, 11) // Show first 11 players as starting XI
     },
-    {
-      id: '2',
-      name: 'Manager Elite',
-      clubName: 'Elite FC',
-      points: 1750,
+    // Add other real users here (populated from Firebase)
+    ...allUsers.filter(otherUser => otherUser.uid !== user?.uid).map(otherUser => ({
+      id: otherUser.uid,
+      name: otherUser.name || 'Unknown Player',
+      clubName: otherUser.clubName || 'Unknown Club',
+      points: (otherUser.wins || 0) * 3 + (otherUser.draws || 0) * 1,
       isCurrentUser: false,
-      level: 8,
-      budget: 180000000,
-      trophies: 5,
-      squad: transferPlayers.slice(0, 11).map(p => ({...p, rating: p.rating + Math.floor(Math.random() * 5)}))
-    },
-    {
-      id: '3',
-      name: 'Football Boss',
-      clubName: 'Boss United',
-      points: 1700,
-      isCurrentUser: false,
-      level: 7,
-      budget: 160000000,
-      trophies: 3,
-      squad: transferPlayers.slice(11, 22).map(p => ({...p, rating: p.rating + Math.floor(Math.random() * 4)}))
-    }
-  ];
+      level: otherUser.level || 1,
+      budget: otherUser.budget || 0,
+      trophies: otherUser.trophies || 0,
+      wins: otherUser.wins || 0,
+      draws: otherUser.draws || 0,
+      losses: otherUser.losses || 0,
+      squad: [] // We don't have their squad data
+    }))
+  ].sort((a, b) => b.points - a.points); // Sort by points
 
   const showManagerProfile = (manager) => {
     setSelectedManager(manager);
@@ -1286,7 +1574,7 @@ const FootballManagerPro = () => {
               >
                 {player ? (
                   <>
-                    <div style={{fontSize: '12px', fontWeight: 'bold', color: 'white', textShadow: '1px 1px 2px rgba(0,0,0,0.7)'}}>{player.number}</div>
+                    <div style={{fontSize: '12px', fontWeight: 'bold', color: 'white', textShadow: '1px 1px 2px rgba(0,0,0,0.7)'}}>{player.rating}</div>
                     <div style={{fontSize: '8px', fontWeight: 'bold', color: 'white', textShadow: '1px 1px 2px rgba(0,0,0,0.7)', marginTop: '2px'}}>
                       {player.name.split(' ')[0]}
                     </div>
@@ -1505,7 +1793,29 @@ const FootballManagerPro = () => {
                   {manager.clubName}
                 </span>
               </div>
-              <span className="points">{manager.points} pts</span>
+              <div className="leaderboard-actions">
+                <span className="points">{manager.points} pts</span>
+                {!manager.isCurrentUser && (
+                  <button
+                    className="btn-add-friend"
+                    onClick={async () => {
+                      if (friends.includes(manager.id)) {
+                        alert(`${manager.name} is already your friend!`);
+                      } else {
+                        const result = await sendFriendRequest(user.uid, manager.id, user.name);
+                        if (result.success) {
+                          alert(`Friend request sent to ${manager.name}!`);
+                        } else {
+                          alert(`Failed to send friend request: ${result.error}`);
+                        }
+                      }
+                    }}
+                    disabled={friends.includes(manager.id)}
+                  >
+                    {friends.includes(manager.id) ? '✓ Friend' : '+ Add Friend'}
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -1821,22 +2131,48 @@ const FootballManagerPro = () => {
 
             {!isMatchPlaying && currentMinute === 0 && (
               <div style={{textAlign: 'center', marginBottom: '20px'}}>
-                <button
-                  onClick={startMatch}
-                  style={{
-                    padding: '15px 30px',
-                    fontSize: '18px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
+                {matchReadyState && (matchReadyState.player1Ready && matchReadyState.player2Ready) ? (
+                  // Both players ready - show start button
+                  <button
+                    onClick={startMatch}
+                    style={{
+                      padding: '15px 30px',
+                      fontSize: '18px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                    }}
+                  >
+                    🚀 START MATCH
+                  </button>
+                ) : (
+                  // Waiting for other player
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#fff3cd',
+                    border: '1px solid #ffeaa7',
                     borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
-                  }}
-                >
-                  🚀 START MATCH
-                </button>
+                    textAlign: 'center'
+                  }}>
+                    <div style={{fontSize: '18px', fontWeight: 'bold', color: '#856404', marginBottom: '10px'}}>
+                      ⏳ Waiting for both players to be ready...
+                    </div>
+                    <div style={{fontSize: '14px', color: '#666'}}>
+                      {matchReadyState ? (
+                        <>
+                          <div>Player 1: {matchReadyState.player1Ready ? '✅ Ready' : '⏳ Waiting...'}</div>
+                          <div>Player 2: {matchReadyState.player2Ready ? '✅ Ready' : '⏳ Waiting...'}</div>
+                        </>
+                      ) : (
+                        'Loading match status...'
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1845,28 +2181,141 @@ const FootballManagerPro = () => {
               {matchEvents.length === 0 && (
                 <p style={{textAlign: 'center', color: '#666', fontStyle: 'italic'}}>Match events will appear here...</p>
               )}
-              {matchEvents.map((event, index) => (
-                <div
-                  key={index}
-                  style={{
-                    padding: '10px',
-                    marginBottom: '10px',
-                    backgroundColor: event.type === 'goal' ? (event.team === 'home' ? '#d4edda' : '#f8d7da') : '#f8f9fa',
-                    borderRadius: '8px',
-                    borderLeft: `4px solid ${event.type === 'goal' ? (event.team === 'home' ? '#28a745' : '#dc3545') : '#6c757d'}`,
-                    animation: 'slideIn 0.5s ease-in'
-                  }}
-                >
-                  <div style={{fontWeight: 'bold', color: '#333'}}>{event.text}</div>
-                  <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>{event.minute}' - {event.player}</div>
-                </div>
-              ))}
+              {matchEvents.map((event, index) => {
+                // Enhanced color coding for different event types
+                const getEventColors = (event) => {
+                  switch(event.type) {
+                    case 'goal':
+                      return {
+                        bg: event.team === 'home' ? '#d4edda' : '#f8d7da',
+                        border: event.team === 'home' ? '#28a745' : '#dc3545'
+                      };
+                    case 'yellow_card':
+                    case 'red_card':
+                      return { bg: '#fff3cd', border: '#ffc107' };
+                    case 'save':
+                      return { bg: '#e2e3e5', border: '#6c757d' };
+                    case 'halftime':
+                    case 'injury_time':
+                      return { bg: '#d1ecf1', border: '#17a2b8' };
+                    default:
+                      return { bg: '#f8f9fa', border: '#6c757d' };
+                  }
+                };
+                const colors = getEventColors(event);
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      padding: '12px',
+                      marginBottom: '8px',
+                      backgroundColor: colors.bg,
+                      borderRadius: '8px',
+                      borderLeft: `4px solid ${colors.border}`,
+                      animation: 'slideIn 0.5s ease-in',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}
+                  >
+                    <div style={{fontSize: '18px', minWidth: '25px'}}>
+                      {event.icon || '⚽'}
+                    </div>
+                    <div style={{flex: 1}}>
+                      <div style={{fontWeight: 'bold', color: '#333', fontSize: '14px'}}>
+                        {event.text}
+                      </div>
+                      <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                        {event.minute}' {event.player !== 'Referee' ? `- ${event.player}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+
+            {/* Match Statistics */}
+            {matchSimulation?.matchStats && currentMinute >= 90 && (
+              <div style={{backgroundColor: 'white', borderRadius: '10px', padding: '20px', marginTop: '20px', border: '1px solid #e0e0e0'}}>
+                <h3 style={{color: '#333', marginTop: '0', textAlign: 'center'}}>📊 MATCH STATISTICS</h3>
+                <div style={{display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '20px', alignItems: 'center'}}>
+                  <div style={{textAlign: 'left'}}>
+                    <h4 style={{color: '#007bff', margin: '0 0 15px 0'}}>{user.name}</h4>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Shots:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.shots}</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Shots on Target:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.shotsOnTarget}</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Corners:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.corners}</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Fouls:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.fouls}</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>🟨 Cards:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.yellowCards}</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span>Possession:</span>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.myStats.possession}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{textAlign: 'center', padding: '0 20px'}}>
+                    <div style={{fontSize: '24px', fontWeight: 'bold', color: '#333'}}>
+                      {matchSimulation.finalScore.home} - {matchSimulation.finalScore.away}
+                    </div>
+                    <div style={{fontSize: '12px', color: '#666', marginTop: '5px'}}>FINAL SCORE</div>
+                  </div>
+
+                  <div style={{textAlign: 'right'}}>
+                    <h4 style={{color: '#dc3545', margin: '0 0 15px 0'}}>{matchSimulation.opponentName}</h4>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.shots}</span>
+                        <span>:Shots</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.shotsOnTarget}</span>
+                        <span>:Shots on Target</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.corners}</span>
+                        <span>:Corners</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.fouls}</span>
+                        <span>:Fouls</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.yellowCards}</span>
+                        <span>:🟨 Cards</span>
+                      </div>
+                      <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                        <span style={{fontWeight: 'bold'}}>{matchSimulation.matchStats.oppStats.possession}%</span>
+                        <span>:Possession</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{textAlign: 'center', marginTop: '20px'}}>
               <button
                 onClick={() => {
                   setMatchSimulation(null);
+                  setCurrentMatchId(null); // Reset current match ID to stop listener
+                  setMatchReadyState(null); // Reset match ready state
                   setCurrentScreen('alerts');
                 }}
                 style={{
