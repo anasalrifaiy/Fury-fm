@@ -168,22 +168,75 @@ const FootballManagerPro = () => {
     return () => unsubscribe();
   }, []);
 
-  // Real-time listener for match ready states
+  // Real-time listener for match challenge acceptance and ready states
   useEffect(() => {
     if (!currentMatchId || !user) return;
 
-    const matchDoc = firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data');
+    const matchDoc = firestore().collection('matches').doc(currentMatchId);
+    const simulationDoc = firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data');
 
     // For web version, we'll poll for updates since real-time listeners aren't implemented in the mock
     const pollInterval = setInterval(async () => {
       try {
-        const doc = await matchDoc.get();
-        if (doc.exists) {
-          const data = doc.data();
+        // First check if simulation data exists (challenge was accepted)
+        const simDoc = await simulationDoc.get();
+        if (simDoc.exists) {
+          const data = simDoc.data();
           setMatchReadyState({
             player1Ready: data.player1Ready,
             player2Ready: data.player2Ready
           });
+
+          // If this is the first time we see simulation data, it means challenge was accepted
+          if (!matchSimulation) {
+            // Get match info to determine opponent
+            const mainMatchDoc = await matchDoc.get();
+            if (mainMatchDoc.exists) {
+              const matchData = mainMatchDoc.data();
+              // If current user is player1 (challenger), opponent is player2
+              // If current user is player2 (accepter), opponent is player1
+              const isChallenger = matchData.player1 === user.uid;
+              const opponentId = isChallenger ? matchData.player2 : matchData.player1;
+              const opponentName = isChallenger ? matchData.player2Name : matchData.player1Name;
+
+              // Mark the challenger (player1) as ready when they get notified of acceptance
+              if (isChallenger) {
+                await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
+                  player1Ready: true
+                });
+                setMatchReadyState(prev => ({ ...prev, player1Ready: true }));
+              }
+
+              // Set up match simulation data
+              const mySquad = Object.keys(formationPlayers).length >= 11 ? formationPlayers :
+                              squad.slice(0, 11).reduce((acc, player, index) => {
+                                acc[`position_${index}`] = player;
+                                return acc;
+                              }, {});
+
+              setMatchSimulation({
+                matchId: currentMatchId,
+                opponentId,
+                opponentName,
+                mySquad,
+                opponentSquad: data.opponentSquad,
+                events: data.events,
+                finalScore: {
+                  home: data.myGoals,
+                  away: data.oppGoals
+                },
+                matchStats: data.matchStats
+              });
+
+              setMatchEvents([]);
+              setCurrentMinute(0);
+              setIsMatchPlaying(false);
+
+              // Navigate to match screen and notify
+              setCurrentScreen('match');
+              alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
+            }
+          }
 
           // If both players are ready, auto-start the match after a short delay
           if (data.player1Ready && data.player2Ready && !isMatchPlaying && currentMinute === 0) {
@@ -195,12 +248,12 @@ const FootballManagerPro = () => {
           }
         }
       } catch (error) {
-        console.error('Error polling match ready state:', error);
+        console.error('Error polling match state:', error);
       }
     }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(pollInterval);
-  }, [currentMatchId, user, isMatchPlaying, currentMinute]);
+  }, [currentMatchId, user, isMatchPlaying, currentMinute, matchSimulation, formationPlayers, squad]);
 
   // Helper function to calculate realistic player values based on rating
   const calculatePlayerValue = (rating, age = 25) => {
@@ -465,7 +518,9 @@ const FootballManagerPro = () => {
   const handleChallengeFriend = async (friendId, friendName) => {
     const result = await createMatch(user.uid, friendId, user.name, friendName);
     if (result.success) {
-      alert(`Challenge sent to ${friendName}! They will receive a notification.`);
+      // Set current match ID to start listening for acceptance
+      setCurrentMatchId(result.matchId);
+      alert(`Challenge sent to ${friendName}! They will receive a notification. You'll be notified when they accept.`);
     } else {
       alert(`Failed to send challenge: ${result.error}`);
     }
@@ -787,8 +842,8 @@ const FootballManagerPro = () => {
         console.log('Created new synchronized match simulation');
       }
 
-      // Mark this player as ready
-      const playerReadyField = user.uid === opponentId ? 'player1Ready' : 'player2Ready';
+      // Mark this player as ready (the person accepting is always player2)
+      const playerReadyField = 'player2Ready';
       await firestore().collection('matches').doc(matchId).collection('simulation').doc('data').update({
         [playerReadyField]: true
       });
