@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './src/styles/web.css';
 import { loginUser, registerUser, logoutUser, onAuthStateChange, resetPassword } from './src/firebase/auth';
 import { createUserProfile, getUserProfile, updateUserProfile, saveUserSquad, getUserSquad, sendFriendRequest, getFriendRequests, acceptFriendRequest, getUserFriends, listenToFriendRequests, createMatch, getUserMatches, listenToMatches, updateMatchResult } from './src/firebase/database';
+import firestore from './src/web-mocks/firebase-firestore';
 
 const FootballManagerPro = () => {
   const [user, setUser] = useState(null);
