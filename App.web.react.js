@@ -730,13 +730,13 @@ const FootballManagerPro = () => {
   const leaderboardManagers = [
     {
       id: '1',
-      name: user.name,
-      clubName: user.clubName,
+      name: user?.name || 'Player',
+      clubName: user?.clubName || 'My Club',
       points: 1800,
       isCurrentUser: true,
-      level: user.level || 1,
-      budget: user.budget || 0,
-      trophies: user.trophies || 0,
+      level: user?.level || 1,
+      budget: user?.budget || 0,
+      trophies: user?.trophies || 0,
       squad: squad.slice(0, 11) // Show first 11 players as starting XI
     },
     {
