@@ -191,8 +191,15 @@ const FootballManagerPro = () => {
             const opponentId = isChallenger ? matchData.player2 : matchData.player1;
             const opponentName = isChallenger ? matchData.player2Name : matchData.player1Name;
 
+            // Always ensure we're on the match screen when simulation exists
+            if (currentScreen !== 'match') {
+              setCurrentScreen('match');
+              console.log('Redirecting to match screen - challenge was accepted');
+            }
+
             // Auto-mark challenger as ready if they aren't already
             if (isChallenger && !data.player1Ready) {
+              console.log('Marking challenger as ready');
               await firestore().collection('matches').doc(currentMatchId).collection('simulation').doc('data').update({
                 player1Ready: true
               });
@@ -212,6 +219,7 @@ const FootballManagerPro = () => {
 
             // If this is the first time we see simulation data, set up match simulation
             if (!matchSimulation) {
+              console.log('Setting up match simulation for the first time');
               const mySquad = Object.keys(formationPlayers).length >= 11 ? formationPlayers :
                               squad.slice(0, 11).reduce((acc, player, index) => {
                                 acc[`position_${index}`] = player;
@@ -235,7 +243,6 @@ const FootballManagerPro = () => {
               setMatchEvents([]);
               setCurrentMinute(0);
               setIsMatchPlaying(false);
-              setCurrentScreen('match');
 
               if (isChallenger) {
                 alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
