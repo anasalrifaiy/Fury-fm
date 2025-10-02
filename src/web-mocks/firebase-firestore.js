@@ -32,15 +32,27 @@ const initDefaultUserData = (userId) => {
       name: 'Player',
       clubName: 'My Club',
       level: 1,
-      budget: 150000000,
+      budget: 200000000,
       trophies: 0,
       wins: 0,
       draws: 0,
       losses: 0,
       matches: 0,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      budgetUpgraded: true
     };
     setToStorage(userKey, defaultData);
+  } else {
+    // Check if existing user needs budget upgrade
+    if (!existingData.budgetUpgraded && existingData.budget) {
+      const upgradedData = {
+        ...existingData,
+        budget: existingData.budget + 50000000, // Add 50M to existing budget
+        budgetUpgraded: true
+      };
+      setToStorage(userKey, upgradedData);
+      console.log(`Budget upgraded for user ${userId}: ${existingData.budget} -> ${upgradedData.budget}`);
+    }
   }
 };
 

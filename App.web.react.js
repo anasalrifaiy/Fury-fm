@@ -31,6 +31,8 @@ const FootballManagerPro = () => {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [showPlayerDetail, setShowPlayerDetail] = useState(false);
   const [positionFilter, setPositionFilter] = useState('All Positions');
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [selectedManager, setSelectedManager] = useState(null);
 
   // Firebase auth state listener
   useEffect(() => {
@@ -74,6 +76,18 @@ const FootballManagerPro = () => {
         const squadResult = await getUserSquad(firebaseUser.uid);
         if (squadResult.success) {
           setSquad(squadResult.data);
+        }
+
+        // Load saved formation
+        try {
+          const formationDoc = await firestore().collection('users').doc(firebaseUser.uid).collection('formations').doc('current').get();
+          if (formationDoc.exists) {
+            const formationData = formationDoc.data();
+            setFormation(formationData.formation);
+            setFormationPlayers(formationData.formationPlayers);
+          }
+        } catch (error) {
+          console.error('Error loading saved formation:', error);
         }
 
         // Load friends data and their names
@@ -682,6 +696,116 @@ const FootballManagerPro = () => {
     }
   };
 
+  const sellPlayer = (player) => {
+    if (window.confirm(`Are you sure you want to sell ${player.name}?`)) {
+      // Calculate sell price (85% of original value, or 90% if player was trained)
+      const wasTrained = player.rating > (player.originalRating || player.rating);
+      const sellPrice = Math.floor(player.value * (wasTrained ? 0.9 : 0.85));
+
+      // Remove player from squad
+      const newSquad = squad.filter(p => p.id !== player.id);
+
+      // Remove player from formation if assigned
+      const newFormationPlayers = { ...formationPlayers };
+      Object.keys(newFormationPlayers).forEach(pos => {
+        if (newFormationPlayers[pos] && newFormationPlayers[pos].id === player.id) {
+          newFormationPlayers[pos] = null;
+        }
+      });
+
+      // Update user budget
+      const updatedUser = { ...user, budget: user.budget + sellPrice };
+
+      // Save changes
+      saveSquadData(newSquad);
+      setFormationPlayers(newFormationPlayers);
+      saveUserData(updatedUser);
+
+      alert(`Successfully sold ${player.name} for $${sellPrice.toLocaleString()}!`);
+    }
+  };
+
+  // Mock manager data for leaderboard
+  const leaderboardManagers = [
+    {
+      id: '1',
+      name: user.name,
+      clubName: user.clubName,
+      points: 1800,
+      isCurrentUser: true,
+      level: user.level || 1,
+      budget: user.budget || 0,
+      trophies: user.trophies || 0,
+      squad: squad.slice(0, 11) // Show first 11 players as starting XI
+    },
+    {
+      id: '2',
+      name: 'Manager Elite',
+      clubName: 'Elite FC',
+      points: 1750,
+      isCurrentUser: false,
+      level: 8,
+      budget: 180000000,
+      trophies: 5,
+      squad: transferPlayers.slice(0, 11).map(p => ({...p, rating: p.rating + Math.floor(Math.random() * 5)}))
+    },
+    {
+      id: '3',
+      name: 'Football Boss',
+      clubName: 'Boss United',
+      points: 1700,
+      isCurrentUser: false,
+      level: 7,
+      budget: 160000000,
+      trophies: 3,
+      squad: transferPlayers.slice(11, 22).map(p => ({...p, rating: p.rating + Math.floor(Math.random() * 4)}))
+    }
+  ];
+
+  const showManagerProfile = (manager) => {
+    setSelectedManager(manager);
+    setShowManagerModal(true);
+  };
+
+  // Formation saving functionality
+  const saveFormation = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const formationData = {
+        formation,
+        formationPlayers,
+        savedAt: new Date().toISOString()
+      };
+
+      await firestore().collection('users').doc(user.uid).collection('formations').doc('current').set(formationData);
+      alert('Formation saved successfully!');
+    } catch (error) {
+      console.error('Error saving formation:', error);
+      alert('Failed to save formation. Please try again.');
+    }
+  };
+
+  const loadFormation = async () => {
+    if (!user?.uid) return;
+
+    try {
+      const formationDoc = await firestore().collection('users').doc(user.uid).collection('formations').doc('current').get();
+
+      if (formationDoc.exists) {
+        const formationData = formationDoc.data();
+        setFormation(formationData.formation);
+        setFormationPlayers(formationData.formationPlayers);
+        alert('Formation loaded successfully!');
+      } else {
+        alert('No saved formation found.');
+      }
+    } catch (error) {
+      console.error('Error loading formation:', error);
+      alert('Failed to load formation. Please try again.');
+    }
+  };
+
   const openPlayerDetail = (player) => {
     // Generate random skills if not present
     const playerWithSkills = {
@@ -934,20 +1058,48 @@ const FootballManagerPro = () => {
       <div className="screen">
         <h2>My Squad</h2>
         <div className="player-list">
-          {squad.map(player => (
-            <div key={player.id} className="player-card">
-              <div className="player-info">
-                <h4
-                  style={{cursor: 'pointer', color: '#007bff'}}
-                  onClick={() => openPlayerDetail(player)}
+          {squad.map(player => {
+            const wasTrained = player.rating > (player.originalRating || player.rating);
+            const sellPrice = Math.floor(player.value * (wasTrained ? 0.9 : 0.85));
+
+            return (
+              <div key={player.id} className="player-card">
+                <div className="player-info">
+                  <h4
+                    style={{cursor: 'pointer', color: '#007bff'}}
+                    onClick={() => openPlayerDetail(player)}
+                  >
+                    {player.name}
+                  </h4>
+                  <p>{player.position} • Rating: {player.rating}</p>
+                  <p>Value: ${player.value.toLocaleString()}</p>
+                  <p style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)'}}>
+                    Sell for: ${sellPrice.toLocaleString()} {wasTrained && '(+5% trained bonus)'}
+                  </p>
+                </div>
+                <button
+                  className="sell-btn"
+                  onClick={() => sellPlayer(player)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    marginLeft: '10px'
+                  }}
                 >
-                  {player.name}
-                </h4>
-                <p>{player.position} • Rating: {player.rating}</p>
-                <p>Value: ${player.value.toLocaleString()}</p>
+                  Sell Player
+                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          {squad.length === 0 && (
+            <p>No players in your squad. Go to Transfer Market to sign some players!</p>
+          )}
         </div>
       </div>
     ),
@@ -999,6 +1151,39 @@ const FootballManagerPro = () => {
             }}
           >
             🗑️ Clear Formation
+          </button>
+        </div>
+        <div style={{textAlign: 'center', marginBottom: '20px'}}>
+          <button
+            onClick={saveFormation}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              marginRight: '10px'
+            }}
+          >
+            💾 Save Formation
+          </button>
+          <button
+            onClick={loadFormation}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px'
+            }}
+          >
+            📁 Load Formation
           </button>
         </div>
         <div className="pitch">
@@ -1207,16 +1392,28 @@ const FootballManagerPro = () => {
       <div className="screen">
         <h2>Leaderboard</h2>
         <div className="leaderboard-list">
-          <div className="rank-item">
-            <span className="rank">1</span>
-            <span className="name">Pro Manager</span>
-            <span className="points">2500 pts</span>
-          </div>
-          <div className="rank-item current">
-            <span className="rank">5</span>
-            <span className="name">{user.name}</span>
-            <span className="points">1800 pts</span>
-          </div>
+          {leaderboardManagers.map((manager, index) => (
+            <div key={manager.id} className={`rank-item ${manager.isCurrentUser ? 'current' : ''}`}>
+              <span className="rank">{index + 1}</span>
+              <div className="manager-info">
+                <span
+                  className="name"
+                  style={{
+                    cursor: 'pointer',
+                    color: manager.isCurrentUser ? 'inherit' : '#007bff',
+                    textDecoration: manager.isCurrentUser ? 'none' : 'underline'
+                  }}
+                  onClick={() => showManagerProfile(manager)}
+                >
+                  {manager.name}
+                </span>
+                <span className="club-name" style={{fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)'}}>
+                  {manager.clubName}
+                </span>
+              </div>
+              <span className="points">{manager.points} pts</span>
+            </div>
+          ))}
         </div>
       </div>
     ),
@@ -1757,6 +1954,62 @@ const FootballManagerPro = () => {
               </div>
             </div>
             <button className="close-btn" onClick={() => setShowPlayerDetail(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manager Profile Modal */}
+      {showManagerModal && selectedManager && (
+        <div className="modal-overlay" onClick={() => setShowManagerModal(false)}>
+          <div className="modal-content player-detail-modal" onClick={e => e.stopPropagation()}>
+            <h3>{selectedManager.name}</h3>
+            <div className="player-detail-grid">
+              <div className="player-basic-info">
+                <div className="info-item">
+                  <label>Club:</label>
+                  <span>{selectedManager.clubName}</span>
+                </div>
+                <div className="info-item">
+                  <label>Level:</label>
+                  <span style={{color: '#007bff', fontWeight: 'bold'}}>{selectedManager.level}</span>
+                </div>
+                <div className="info-item">
+                  <label>Points:</label>
+                  <span style={{color: '#28a745', fontWeight: 'bold'}}>{selectedManager.points}</span>
+                </div>
+                <div className="info-item">
+                  <label>Budget:</label>
+                  <span>${(selectedManager.budget || 0).toLocaleString()}</span>
+                </div>
+                <div className="info-item">
+                  <label>Trophies:</label>
+                  <span style={{color: '#ffc107', fontWeight: 'bold'}}>{selectedManager.trophies} 🏆</span>
+                </div>
+              </div>
+
+              <div className="player-skills">
+                <h4>Squad ({selectedManager.squad.length} players)</h4>
+                <div className="manager-squad-list">
+                  {selectedManager.squad.map(player => (
+                    <div key={player.id} className="squad-player-item">
+                      <span className="player-name">{player.name}</span>
+                      <span className="player-position">{player.position}</span>
+                      <span className="player-rating" style={{color: '#007bff', fontWeight: 'bold'}}>
+                        {player.rating}
+                      </span>
+                    </div>
+                  ))}
+                  {selectedManager.squad.length === 0 && (
+                    <p style={{color: 'rgba(255,255,255,0.7)', fontStyle: 'italic'}}>
+                      No players in squad
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <button className="close-btn" onClick={() => setShowManagerModal(false)}>
               Close
             </button>
           </div>

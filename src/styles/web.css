@@ -1330,3 +1330,63 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Manager squad list styles */
+.manager-squad-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.squad-player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+.squad-player-item .player-name {
+  flex: 1;
+  font-weight: 600;
+  color: white;
+}
+
+.squad-player-item .player-position {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  background: rgba(0, 123, 255, 0.3);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin: 0 8px;
+}
+
+.squad-player-item .player-rating {
+  flex: 0 0 auto;
+  font-weight: bold;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Leaderboard manager info styles */
+.manager-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0 1rem;
+}
+
+.manager-info .name {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.manager-info .club-name {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
