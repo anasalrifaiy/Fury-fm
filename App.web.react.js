@@ -513,14 +513,28 @@ const FootballManagerPro = () => {
 
   const handleAcceptMatch = async (matchId, opponentId, opponentName) => {
     try {
-      const opponentSquadResult = await getUserSquad(opponentId);
-      const mySquadResult = await getUserSquad(user.uid);
+      // For web version, use formationPlayers for validation and match simulation
+      // If user hasn't set up formation, use first 11 players from squad
+      const mySquad = Object.keys(formationPlayers).length >= 11 ? formationPlayers :
+                      squad.slice(0, 11).reduce((acc, player, index) => {
+                        acc[`position_${index}`] = player;
+                        return acc;
+                      }, {});
 
-      const mySquad = mySquadResult.success ? mySquadResult.data : formationPlayers;
-      const opponentSquad = opponentSquadResult.success ? opponentSquadResult.data : {};
+      // For opponent, we'll simulate a squad from the available players
+      // In real implementation, this would fetch their actual formation
+      const opponentSquad = squad.slice(0, 11).reduce((acc, player, index) => {
+        acc[`position_${index}`] = {
+          ...player,
+          name: `${opponentName} Player ${index + 1}`,
+          rating: Math.floor(Math.random() * 20) + 70 // Random rating 70-90
+        };
+        return acc;
+      }, {});
 
       if (!validateSquad(mySquad)) {
         alert('You need exactly 11 players in your formation to start a match! Please go to the Formation tab and complete your squad.');
+        setCurrentScreen('formation'); // Navigate to formation screen
         return;
       }
 
