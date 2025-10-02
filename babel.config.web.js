@@ -1,13 +1,13 @@
 module.exports = {
   presets: [
-    '@babel/preset-env',
-    '@babel/preset-react',
-    '@babel/preset-typescript',
-    '@babel/preset-flow'
+    ['@babel/preset-env', {
+      targets: {
+        browsers: ['last 2 versions', 'ie >= 11']
+      }
+    }],
+    '@babel/preset-react'
   ],
   plugins: [
-    '@babel/plugin-transform-class-properties',
-    '@babel/plugin-transform-runtime',
-    '@babel/plugin-transform-flow-strip-types'
+    '@babel/plugin-proposal-class-properties'
   ]
 };
