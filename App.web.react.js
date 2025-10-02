@@ -44,10 +44,19 @@ const FootballManagerPro = () => {
         if (profileResult.success) {
           let userData = profileResult.data;
 
-          // Migration: Set budget for existing users who don't have it
+          // Migration: Set budget for users
           if (!userData.budget) {
-            userData.budget = 150000000;
-            await updateUserProfile(firebaseUser.uid, { budget: 150000000 });
+            // New users get 200M
+            userData.budget = 200000000;
+            userData.budgetUpgraded = true;
+            await updateUserProfile(firebaseUser.uid, { budget: 200000000, budgetUpgraded: true });
+          } else if (!userData.budgetUpgraded && userData.budget) {
+            // Existing users get +50M upgrade
+            const upgradedBudget = userData.budget + 50000000;
+            userData.budget = upgradedBudget;
+            userData.budgetUpgraded = true;
+            await updateUserProfile(firebaseUser.uid, { budget: upgradedBudget, budgetUpgraded: true });
+            console.log(`Budget upgraded for user ${firebaseUser.uid}: ${userData.budget - 50000000} -> ${userData.budget}`);
           }
 
           setUser({
@@ -62,8 +71,9 @@ const FootballManagerPro = () => {
             name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
             clubName: 'FC United',
             level: 1,
-            budget: 150000000,
-            trophies: 0
+            budget: 200000000,
+            trophies: 0,
+            budgetUpgraded: true
           };
           await createUserProfile(firebaseUser.uid, defaultProfile);
           setUser({
