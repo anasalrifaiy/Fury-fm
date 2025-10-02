@@ -1,4 +1,4 @@
-package com.footballmanagerpro
+package furyfm.anaszrock.com
 
 import android.app.Application
 import com.facebook.react.PackageList
@@ -9,6 +9,7 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
+import furyfm.anaszrock.com.BuildConfig
 
 class MainApplication : Application(), ReactApplication {
 

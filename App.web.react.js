@@ -30,6 +30,7 @@ const FootballManagerPro = () => {
   const [isMatchPlaying, setIsMatchPlaying] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [showPlayerDetail, setShowPlayerDetail] = useState(false);
+  const [positionFilter, setPositionFilter] = useState('All Positions');
 
   // Firebase auth state listener
   useEffect(() => {
@@ -138,32 +139,115 @@ const FootballManagerPro = () => {
 
   const [transferPlayers] = useState((() => {
     const players = [
-      // World Class Players (correctly priced)
+      // World Class Players (90+ rating)
       { id: 101, name: 'Kylian Mbappé', position: 'ST', rating: 91, age: 24, number: 7, club: 'PSG' },
       { id: 102, name: 'Erling Haaland', position: 'ST', rating: 90, age: 23, number: 9, club: 'Man City' },
-      { id: 103, name: 'Mohamed Salah', position: 'RW', rating: 89, age: 31, number: 11, club: 'Liverpool' },
-      { id: 104, name: 'Kevin De Bruyne', position: 'CAM', rating: 91, age: 32, number: 17, club: 'Man City' },
-      { id: 105, name: 'Virgil van Dijk', position: 'CB', rating: 88, age: 32, number: 4, club: 'Liverpool' },
-      { id: 106, name: 'Sadio Mané', position: 'LW', rating: 86, age: 31, number: 10, club: 'Bayern' },
-      { id: 107, name: 'N\'Golo Kanté', position: 'CDM', rating: 87, age: 32, number: 7, club: 'Chelsea' },
-      { id: 108, name: 'Mason Mount', position: 'CAM', rating: 83, age: 25, number: 19, club: 'Chelsea' },
-      { id: 109, name: 'Phil Foden', position: 'CAM', rating: 84, age: 23, number: 47, club: 'Man City' },
-      { id: 110, name: 'Bukayo Saka', position: 'RW', rating: 84, age: 22, number: 7, club: 'Arsenal' },
-      { id: 111, name: 'Karim Benzema', position: 'ST', rating: 89, age: 35, number: 9, club: 'Real Madrid' },
-      { id: 112, name: 'Vinícius Jr.', position: 'LW', rating: 86, age: 23, number: 20, club: 'Real Madrid' },
-      { id: 113, name: 'Luka Modrić', position: 'CM', rating: 87, age: 38, number: 10, club: 'Real Madrid' },
-      { id: 114, name: 'Pedri', position: 'CAM', rating: 85, age: 21, number: 16, club: 'Barcelona' },
-      { id: 115, name: 'Gavi', position: 'CM', rating: 81, age: 19, number: 6, club: 'Barcelona' },
-      { id: 116, name: 'Robert Lewandowski', position: 'ST', rating: 89, age: 35, number: 9, club: 'Barcelona' },
-      { id: 117, name: 'Antoine Griezmann', position: 'CAM', rating: 85, age: 32, number: 8, club: 'Atletico' },
-      { id: 118, name: 'João Félix', position: 'CAM', rating: 84, age: 24, number: 7, club: 'Atletico' },
-      { id: 119, name: 'Ansu Fati', position: 'LW', rating: 81, age: 21, number: 10, club: 'Barcelona' },
-      { id: 120, name: 'Thibaut Courtois', position: 'GK', rating: 89, age: 31, number: 1, club: 'Real Madrid' },
-      { id: 121, name: 'Victor Osimhen', position: 'ST', rating: 86, age: 25, number: 9, club: 'Napoli' },
-      { id: 122, name: 'Rafael Leão', position: 'LW', rating: 84, age: 24, number: 17, club: 'AC Milan' },
-      { id: 123, name: 'Jamal Musiala', position: 'CAM', rating: 83, age: 21, number: 42, club: 'Bayern' },
-      { id: 124, name: 'Jude Bellingham', position: 'CM', rating: 84, age: 20, number: 22, club: 'Dortmund' },
-      { id: 125, name: 'Neymar Jr.', position: 'LW', rating: 89, age: 31, number: 10, club: 'PSG' }
+      { id: 103, name: 'Kevin De Bruyne', position: 'CAM', rating: 91, age: 32, number: 17, club: 'Man City' },
+      { id: 104, name: 'Lionel Messi', position: 'RW', rating: 90, age: 36, number: 10, club: 'Inter Miami' },
+      { id: 105, name: 'Cristiano Ronaldo', position: 'ST', rating: 90, age: 39, number: 7, club: 'Al Nassr' },
+
+      // Elite Players (85-89 rating)
+      { id: 106, name: 'Mohamed Salah', position: 'RW', rating: 89, age: 31, number: 11, club: 'Liverpool' },
+      { id: 107, name: 'Karim Benzema', position: 'ST', rating: 89, age: 35, number: 9, club: 'Al Ittihad' },
+      { id: 108, name: 'Robert Lewandowski', position: 'ST', rating: 89, age: 35, number: 9, club: 'Barcelona' },
+      { id: 109, name: 'Neymar Jr.', position: 'LW', rating: 89, age: 31, number: 10, club: 'Al Hilal' },
+      { id: 110, name: 'Thibaut Courtois', position: 'GK', rating: 89, age: 31, number: 1, club: 'Real Madrid' },
+      { id: 111, name: 'Virgil van Dijk', position: 'CB', rating: 88, age: 32, number: 4, club: 'Liverpool' },
+      { id: 112, name: 'Luka Modrić', position: 'CM', rating: 87, age: 38, number: 10, club: 'Real Madrid' },
+      { id: 113, name: 'N\'Golo Kanté', position: 'CDM', rating: 87, age: 32, number: 7, club: 'Al Ittihad' },
+      { id: 114, name: 'Vinícius Jr.', position: 'LW', rating: 86, age: 23, number: 20, club: 'Real Madrid' },
+      { id: 115, name: 'Sadio Mané', position: 'LW', rating: 86, age: 31, number: 10, club: 'Al Nassr' },
+      { id: 116, name: 'Victor Osimhen', position: 'ST', rating: 86, age: 25, number: 9, club: 'Napoli' },
+      { id: 117, name: 'Pedri', position: 'CAM', rating: 85, age: 21, number: 16, club: 'Barcelona' },
+      { id: 118, name: 'Antoine Griezmann', position: 'CAM', rating: 85, age: 32, number: 8, club: 'Atletico' },
+      { id: 119, name: 'Casemiro', position: 'CDM', rating: 85, age: 31, number: 18, club: 'Man United' },
+      { id: 120, name: 'Alisson', position: 'GK', rating: 85, age: 30, number: 1, club: 'Liverpool' },
+
+      // Very Good Players (80-84 rating)
+      { id: 121, name: 'João Félix', position: 'CAM', rating: 84, age: 24, number: 7, club: 'Chelsea' },
+      { id: 122, name: 'Phil Foden', position: 'CAM', rating: 84, age: 23, number: 47, club: 'Man City' },
+      { id: 123, name: 'Bukayo Saka', position: 'RW', rating: 84, age: 22, number: 7, club: 'Arsenal' },
+      { id: 124, name: 'Jude Bellingham', position: 'CM', rating: 84, age: 20, number: 5, club: 'Real Madrid' },
+      { id: 125, name: 'Rafael Leão', position: 'LW', rating: 84, age: 24, number: 17, club: 'AC Milan' },
+      { id: 126, name: 'Jamal Musiala', position: 'CAM', rating: 83, age: 21, number: 42, club: 'Bayern' },
+      { id: 127, name: 'Mason Mount', position: 'CAM', rating: 83, age: 25, number: 19, club: 'Man United' },
+      { id: 128, name: 'Khvicha Kvaratskhelia', position: 'LW', rating: 83, age: 23, number: 77, club: 'Napoli' },
+      { id: 129, name: 'Declan Rice', position: 'CDM', rating: 83, age: 24, number: 41, club: 'Arsenal' },
+      { id: 130, name: 'Gianluigi Donnarumma', position: 'GK', rating: 83, age: 24, number: 99, club: 'PSG' },
+      { id: 131, name: 'Ansu Fati', position: 'LW', rating: 81, age: 21, number: 10, club: 'Brighton' },
+      { id: 132, name: 'Gavi', position: 'CM', rating: 81, age: 19, number: 6, club: 'Barcelona' },
+      { id: 133, name: 'Florian Wirtz', position: 'CAM', rating: 81, age: 20, number: 27, club: 'Bayer 04' },
+      { id: 134, name: 'Eduardo Camavinga', position: 'CM', rating: 81, age: 21, number: 12, club: 'Real Madrid' },
+      { id: 135, name: 'Ryan Gravenberch', position: 'CM', rating: 80, age: 21, number: 38, club: 'Liverpool' },
+      { id: 136, name: 'Christopher Nkunku', position: 'CAM', rating: 84, age: 26, number: 18, club: 'Chelsea' },
+      { id: 137, name: 'Marcus Rashford', position: 'LW', rating: 82, age: 26, number: 10, club: 'Man United' },
+      { id: 138, name: 'Darwin Núñez', position: 'ST', rating: 82, age: 24, number: 9, club: 'Liverpool' },
+      { id: 139, name: 'Julián Álvarez', position: 'ST', rating: 82, age: 24, number: 19, club: 'Man City' },
+      { id: 140, name: 'William Saliba', position: 'CB', rating: 82, age: 22, number: 2, club: 'Arsenal' },
+
+      // Good Players (75-79 rating)
+      { id: 141, name: 'Serge Gnabry', position: 'RW', rating: 79, age: 28, number: 7, club: 'Bayern' },
+      { id: 142, name: 'Gabriel Jesus', position: 'ST', rating: 79, age: 27, number: 9, club: 'Arsenal' },
+      { id: 143, name: 'Rodrygo', position: 'RW', rating: 79, age: 23, number: 11, club: 'Real Madrid' },
+      { id: 144, name: 'Tchouaméni', position: 'CDM', rating: 79, age: 24, number: 18, club: 'Real Madrid' },
+      { id: 145, name: 'Frenkie de Jong', position: 'CM', rating: 82, age: 26, number: 21, club: 'Barcelona' },
+      { id: 146, name: 'Jack Grealish', position: 'LW', rating: 82, age: 28, number: 10, club: 'Man City' },
+      { id: 147, name: 'Rúben Dias', position: 'CB', rating: 84, age: 26, number: 3, club: 'Man City' },
+      { id: 148, name: 'Erling Haaland', position: 'ST', rating: 90, age: 23, number: 9, club: 'Man City' },
+      { id: 149, name: 'Bruno Fernandes', position: 'CAM', rating: 83, age: 29, number: 18, club: 'Man United' },
+      { id: 150, name: 'Kai Havertz', position: 'CAM', rating: 81, age: 24, number: 29, club: 'Arsenal' },
+
+      // Mid-tier Players (70-74 rating)
+      { id: 151, name: 'Ben White', position: 'CB', rating: 79, age: 26, number: 4, club: 'Arsenal' },
+      { id: 152, name: 'Gabriel Martinelli', position: 'LW', rating: 79, age: 22, number: 11, club: 'Arsenal' },
+      { id: 153, name: 'Mateo Kovačić', position: 'CM', rating: 82, age: 29, number: 8, club: 'Man City' },
+      { id: 154, name: 'Thiago Silva', position: 'CB', rating: 81, age: 39, number: 6, club: 'Chelsea' },
+      { id: 155, name: 'Reece James', position: 'RB', rating: 81, age: 24, number: 24, club: 'Chelsea' },
+      { id: 156, name: 'Cole Palmer', position: 'CAM', rating: 78, age: 21, number: 20, club: 'Chelsea' },
+      { id: 157, name: 'Malo Gusto', position: 'RB', rating: 74, age: 20, number: 27, club: 'Chelsea' },
+      { id: 158, name: 'Enzo Fernández', position: 'CM', rating: 81, age: 23, number: 5, club: 'Chelsea' },
+      { id: 159, name: 'Moisés Caicedo', position: 'CDM', rating: 79, age: 22, number: 25, club: 'Chelsea' },
+      { id: 160, name: 'Nicolas Jackson', position: 'ST', rating: 76, age: 22, number: 15, club: 'Chelsea' },
+      { id: 161, name: 'Mykhaylo Mudryk', position: 'LW', rating: 76, age: 23, number: 10, club: 'Chelsea' },
+      { id: 162, name: 'Raheem Sterling', position: 'RW', rating: 81, age: 29, number: 7, club: 'Chelsea' },
+      { id: 163, name: 'Conor Gallagher', position: 'CM', rating: 78, age: 24, number: 23, club: 'Chelsea' },
+      { id: 164, name: 'Levi Colwill', position: 'CB', rating: 76, age: 21, number: 26, club: 'Chelsea' },
+      { id: 165, name: 'Ben Chilwell', position: 'LB', rating: 79, age: 27, number: 21, club: 'Chelsea' },
+      { id: 166, name: 'Martin Ødegaard', position: 'CAM', rating: 84, age: 25, number: 8, club: 'Arsenal' },
+      { id: 167, name: 'Thomas Partey', position: 'CDM', rating: 80, age: 30, number: 5, club: 'Arsenal' },
+      { id: 168, name: 'Gabriel Magalhães', position: 'CB', rating: 81, age: 26, number: 6, club: 'Arsenal' },
+      { id: 169, name: 'Oleksandr Zinchenko', position: 'LB', rating: 79, age: 27, number: 35, club: 'Arsenal' },
+      { id: 170, name: 'Aaron Ramsdale', position: 'GK', rating: 79, age: 25, number: 1, club: 'Arsenal' },
+      { id: 171, name: 'Leandro Trossard', position: 'LW', rating: 79, age: 29, number: 19, club: 'Arsenal' },
+      { id: 172, name: 'Fabio Vieira', position: 'CAM', rating: 76, age: 24, number: 21, club: 'Arsenal' },
+      { id: 173, name: 'Takehiro Tomiyasu', position: 'RB', rating: 78, age: 25, number: 18, club: 'Arsenal' },
+      { id: 174, name: 'Jakub Kiwior', position: 'CB', rating: 74, age: 24, number: 15, club: 'Arsenal' },
+      { id: 175, name: 'Emile Smith Rowe', position: 'CAM', rating: 76, age: 23, number: 32, club: 'Arsenal' },
+      { id: 176, name: 'Bernardo Silva', position: 'RW', rating: 85, age: 29, number: 20, club: 'Man City' },
+      { id: 177, name: 'Ilkay Gündogan', position: 'CM', rating: 83, age: 33, number: 19, club: 'Barcelona' },
+      { id: 178, name: 'John Stones', position: 'CB', rating: 82, age: 29, number: 5, club: 'Man City' },
+      { id: 179, name: 'Kyle Walker', position: 'RB', rating: 82, age: 33, number: 2, club: 'Man City' },
+      { id: 180, name: 'Rodri', position: 'CDM', rating: 85, age: 27, number: 16, club: 'Man City' },
+      { id: 181, name: 'Jeremy Doku', position: 'LW', rating: 77, age: 21, number: 11, club: 'Man City' },
+      { id: 182, name: 'Manuel Akanji', position: 'CB', rating: 80, age: 28, number: 25, club: 'Man City' },
+      { id: 183, name: 'Nathan Aké', position: 'CB', rating: 79, age: 28, number: 6, club: 'Man City' },
+      { id: 184, name: 'Josko Gvardiol', position: 'LB', rating: 79, age: 22, number: 24, club: 'Man City' },
+      { id: 185, name: 'Ederson', position: 'GK', rating: 84, age: 30, number: 31, club: 'Man City' },
+      { id: 186, name: 'Cody Gakpo', position: 'LW', rating: 80, age: 24, number: 18, club: 'Liverpool' },
+      { id: 187, name: 'Luis Díaz', position: 'LW', rating: 81, age: 27, number: 7, club: 'Liverpool' },
+      { id: 188, name: 'Dominik Szoboszlai', position: 'CM', rating: 80, age: 23, number: 8, club: 'Liverpool' },
+      { id: 189, name: 'Alexis Mac Allister', position: 'CM', rating: 80, age: 25, number: 10, club: 'Liverpool' },
+      { id: 190, name: 'Andy Robertson', position: 'LB', rating: 82, age: 30, number: 26, club: 'Liverpool' },
+      { id: 191, name: 'Trent Alexander-Arnold', position: 'RB', rating: 83, age: 25, number: 66, club: 'Liverpool' },
+      { id: 192, name: 'Ibrahima Konaté', position: 'CB', rating: 80, age: 24, number: 5, club: 'Liverpool' },
+      { id: 193, name: 'Joel Matip', position: 'CB', rating: 78, age: 32, number: 32, club: 'Liverpool' },
+      { id: 194, name: 'Caoimhin Kelleher', position: 'GK', rating: 74, age: 25, number: 62, club: 'Liverpool' },
+      { id: 195, name: 'Diogo Jota', position: 'ST', rating: 82, age: 27, number: 20, club: 'Liverpool' },
+      { id: 196, name: 'Curtis Jones', position: 'CM', rating: 76, age: 23, number: 17, club: 'Liverpool' },
+      { id: 197, name: 'Harvey Elliott', position: 'RW', rating: 74, age: 21, number: 19, club: 'Liverpool' },
+      { id: 198, name: 'Ben Doak', position: 'RW', rating: 70, age: 18, number: 50, club: 'Liverpool' },
+      { id: 199, name: 'Jarell Quansah', position: 'CB', rating: 72, age: 21, number: 78, club: 'Liverpool' },
+      { id: 200, name: 'Conor Bradley', position: 'RB', rating: 71, age: 20, number: 84, club: 'Liverpool' }
     ];
     // Add calculated values to all players
     return players.map(player => ({
@@ -1017,50 +1101,76 @@ const FootballManagerPro = () => {
 
       </div>
     ),
-    transfers: () => (
-      <div className="screen">
-        <h2>Transfer Market</h2>
-        <div className="transfer-filters">
-          <select>
-            <option>All Positions</option>
-            <option>Forward</option>
-            <option>Midfielder</option>
-            <option>Defender</option>
-            <option>Goalkeeper</option>
-          </select>
-        </div>
-        <div className="player-list">
-          {transferPlayers.filter(player => !squad.some(s => s.id === player.id)).map(player => (
-            <div key={player.id} className="player-card transfer">
-              <div className="player-info">
-                <h4
-                  style={{cursor: 'pointer', color: '#007bff'}}
-                  onClick={() => openPlayerDetail(player)}
-                >
-                  {player.name}
-                </h4>
-                <p>{player.position} • Rating: {player.rating} • {player.club}</p>
-                <p>Price: ${formatPrice(player.value)}</p>
-              </div>
-              <button
-                className="sign-btn"
-                onClick={() => signPlayer(player)}
-                disabled={(user.budget || 0) < player.value}
-                style={{
-                  opacity: (user.budget || 0) < player.value ? 0.5 : 1,
-                  cursor: (user.budget || 0) < player.value ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {(user.budget || 0) >= player.value ? 'Sign Player' : 'Not Enough Budget'}
-              </button>
+    transfers: () => {
+      const availablePlayers = transferPlayers.filter(player => !squad.some(s => s.id === player.id));
+      const filteredPlayers = positionFilter === 'All Positions'
+        ? availablePlayers
+        : availablePlayers.filter(player => {
+            const positionMap = {
+              'Forwards': ['ST', 'CF'],
+              'Midfielders': ['CM', 'CAM', 'CDM', 'LM', 'RM'],
+              'Defenders': ['CB', 'LB', 'RB', 'LWB', 'RWB'],
+              'Wingers': ['LW', 'RW'],
+              'Goalkeepers': ['GK']
+            };
+            return positionMap[positionFilter]?.includes(player.position) || false;
+          });
+
+      return (
+        <div className="screen">
+          <div className="transfer-header">
+            <h2>Transfer Market</h2>
+            <div className="player-count">
+              {filteredPlayers.length} players available
             </div>
-          ))}
-          {transferPlayers.filter(player => !squad.some(s => s.id === player.id)).length === 0 && (
-            <p>All available players have been signed!</p>
-          )}
+          </div>
+          <div className="transfer-filters">
+            <select
+              value={positionFilter}
+              onChange={(e) => setPositionFilter(e.target.value)}
+            >
+              <option>All Positions</option>
+              <option>Forwards</option>
+              <option>Midfielders</option>
+              <option>Wingers</option>
+              <option>Defenders</option>
+              <option>Goalkeepers</option>
+            </select>
+          </div>
+          <div className="player-list">
+            {filteredPlayers.map(player => (
+              <div key={player.id} className="player-card transfer">
+                <div className="player-info">
+                  <h4
+                    style={{cursor: 'pointer', color: '#007bff'}}
+                    onClick={() => openPlayerDetail(player)}
+                  >
+                    {player.name}
+                  </h4>
+                  <p>{player.position} • Rating: {player.rating} • Age: {player.age}</p>
+                  <p style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)'}}>{player.club}</p>
+                  <p style={{fontWeight: 'bold', color: '#28a745'}}>Price: ${formatPrice(player.value)}</p>
+                </div>
+                <button
+                  className="sign-btn"
+                  onClick={() => signPlayer(player)}
+                  disabled={(user.budget || 0) < player.value}
+                  style={{
+                    opacity: (user.budget || 0) < player.value ? 0.5 : 1,
+                    cursor: (user.budget || 0) < player.value ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {(user.budget || 0) >= player.value ? 'Sign Player' : 'Not Enough Budget'}
+                </button>
+              </div>
+            ))}
+            {filteredPlayers.length === 0 && (
+              <p>No players available for the selected position!</p>
+            )}
+          </div>
         </div>
-      </div>
-    ),
+      );
+    },
     matches: () => (
       <div className="screen">
         <h2>Matches</h2>
