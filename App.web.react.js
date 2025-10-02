@@ -34,6 +34,7 @@ const FootballManagerPro = () => {
   const [positionFilter, setPositionFilter] = useState('All Positions');
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState(null);
+  const [matchHistory, setMatchHistory] = useState([]);
 
   // Firebase auth state listener
   useEffect(() => {
@@ -134,6 +135,12 @@ const FootballManagerPro = () => {
         const unsubscribeMatches = listenToMatches(firebaseUser.uid, (matches) => {
           setIncomingMatches(matches);
         });
+
+        // Load match history from localStorage
+        const savedHistory = localStorage.getItem(`matchHistory_${firebaseUser.uid}`);
+        if (savedHistory) {
+          setMatchHistory(JSON.parse(savedHistory));
+        }
 
         setCurrentScreen('dashboard');
       } else {
@@ -620,7 +627,44 @@ const FootballManagerPro = () => {
       const winnerText = matchResult.winner === 'player1' ? matchSimulation.opponentName :
                         matchResult.winner === 'player2' ? 'You' : 'Draw';
 
-      alert(`Match completed!\n${matchSimulation.opponentName} ${matchSimulation.finalScore.away} - ${matchSimulation.finalScore.home} You\nWinner: ${winnerText}`);
+      // Calculate match rewards
+      let rewardMoney = 0;
+      let rewardMessage = '';
+
+      if (matchResult.winner === 'player2') {
+        // Player won
+        rewardMoney = 5000000; // 5M for winning
+        rewardMessage = '\n🎉 Victory Bonus: +$5M';
+      } else if (matchResult.winner === 'draw') {
+        // Draw
+        rewardMoney = 1000000; // 1M for draw
+        rewardMessage = '\n⚖️ Draw Bonus: +$1M';
+      }
+      // No money for losses
+
+      // Update user budget if there's a reward
+      if (rewardMoney > 0) {
+        const newBudget = user.budget + rewardMoney;
+        setUser(prev => ({ ...prev, budget: newBudget }));
+        await updateUserProfile(user.uid, { budget: newBudget });
+      }
+
+      // Add match to history
+      const newMatchRecord = {
+        id: matchSimulation.matchId,
+        date: new Date().toISOString(),
+        opponent: matchSimulation.opponentName,
+        homeScore: matchSimulation.finalScore.home,
+        awayScore: matchSimulation.finalScore.away,
+        result: matchResult.winner === 'player2' ? 'W' : matchResult.winner === 'draw' ? 'D' : 'L',
+        reward: rewardMoney
+      };
+
+      const updatedHistory = [newMatchRecord, ...matchHistory].slice(0, 20); // Keep last 20 matches
+      setMatchHistory(updatedHistory);
+      localStorage.setItem(`matchHistory_${user.uid}`, JSON.stringify(updatedHistory));
+
+      alert(`Match completed!\n${matchSimulation.opponentName} ${matchSimulation.finalScore.away} - ${matchSimulation.finalScore.home} You\nWinner: ${winnerText}${rewardMessage}`);
 
       setIncomingMatches(prev => prev.filter(match => match.id !== matchSimulation.matchId));
       setMatchSimulation(null);
@@ -1405,11 +1449,36 @@ const FootballManagerPro = () => {
           </button>
         </div>
         <div className="recent-matches">
-          <h3>Recent Results</h3>
-          <div className="match-result">
-            <p>No matches played yet</p>
-            <span>Start playing to see your results here!</span>
-          </div>
+          <h3>Match History</h3>
+          {matchHistory.length === 0 ? (
+            <div className="match-result">
+              <p>No matches played yet</p>
+              <span>Start playing to see your results here!</span>
+            </div>
+          ) : (
+            <div className="match-history-list">
+              {matchHistory.map((match, index) => (
+                <div key={match.id} className={`match-result ${match.result === 'W' ? 'win' : match.result === 'D' ? 'draw' : 'loss'}`}>
+                  <div className="match-info">
+                    <div className="match-teams">
+                      <span>You {match.homeScore}</span>
+                      <span className="vs">-</span>
+                      <span>{match.awayScore} {match.opponent}</span>
+                    </div>
+                    <div className="match-details">
+                      <span className="match-date">{new Date(match.date).toLocaleDateString()}</span>
+                      <span className={`match-result-badge ${match.result.toLowerCase()}`}>
+                        {match.result === 'W' ? '🏆 Win' : match.result === 'D' ? '⚖️ Draw' : '❌ Loss'}
+                      </span>
+                      {match.reward > 0 && (
+                        <span className="match-reward">+${(match.reward / 1000000).toFixed(1)}M</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     ),
