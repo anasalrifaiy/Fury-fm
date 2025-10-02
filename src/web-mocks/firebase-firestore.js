@@ -29,10 +29,10 @@ const initDefaultUserData = (userId) => {
   if (!existingData) {
     const defaultData = {
       uid: userId,
-      name: 'Demo User',
-      clubName: 'Demo FC',
+      name: 'Player',
+      clubName: 'My Club',
       level: 1,
-      coins: 50000,
+      budget: 150000000,
       trophies: 0,
       wins: 0,
       draws: 0,
@@ -41,26 +41,9 @@ const initDefaultUserData = (userId) => {
       createdAt: new Date().toISOString()
     };
     setToStorage(userKey, defaultData);
-
-    // Initialize default squad
-    initDefaultSquad(userId);
   }
 };
 
-const initDefaultSquad = (userId) => {
-  const defaultSquad = [
-    { id: '1', name: 'Marcus Rashford', position: 'LW', rating: 85, pace: 90, shooting: 84, passing: 75, defending: 40, physical: 78, number: 10, goals: 5, assists: 3, matches: 8, value: 45000 },
-    { id: '2', name: 'Bruno Fernandes', position: 'CAM', rating: 86, pace: 68, shooting: 85, passing: 90, defending: 55, physical: 75, number: 8, goals: 8, assists: 12, matches: 10, value: 50000 },
-    { id: '3', name: 'Casemiro', position: 'CDM', rating: 85, pace: 55, shooting: 72, passing: 85, defending: 90, physical: 88, number: 18, goals: 2, assists: 4, matches: 9, value: 35000 },
-    { id: '4', name: 'Virgil van Dijk', position: 'CB', rating: 88, pace: 75, shooting: 60, passing: 85, defending: 95, physical: 90, number: 4, goals: 1, assists: 1, matches: 8, value: 55000 },
-    { id: '5', name: 'Alisson Becker', position: 'GK', rating: 89, pace: 45, shooting: 25, passing: 75, defending: 40, physical: 85, number: 1, goals: 0, assists: 0, matches: 10, value: 40000 }
-  ];
-
-  defaultSquad.forEach(player => {
-    const playerKey = getStorageKey(`users/${userId}/squad`, player.id);
-    setToStorage(playerKey, player);
-  });
-};
 
 const firestore = () => ({
   collection: (collectionName) => ({

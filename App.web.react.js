@@ -1111,165 +1111,207 @@ const FootballManagerPro = () => {
       </div>
     ),
     profile: () => (
-      <div className="screen">
-        <h2>Profile</h2>
-        <div className="profile-info">
+      <div className="screen profile-container">
+        <div className="profile-card">
+          <div className="profile-avatar">
+            {user.name ? user.name.charAt(0).toUpperCase() : '👤'}
+          </div>
+
           {editingProfile ? (
-            <>
-              <div style={{marginBottom: '15px'}}>
-                <label style={{display: 'block', marginBottom: '5px'}}>Manager Name:</label>
+            <div className="profile-form">
+              <div className="form-group">
+                <label>Manager Name</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  style={{padding: '10px', width: '200px', border: '1px solid #ccc', borderRadius: '5px'}}
                 />
               </div>
-              <div style={{marginBottom: '15px'}}>
-                <label style={{display: 'block', marginBottom: '5px'}}>Club Name:</label>
+              <div className="form-group">
+                <label>Club Name</label>
                 <input
                   type="text"
                   value={editClubName}
                   onChange={(e) => setEditClubName(e.target.value)}
-                  style={{padding: '10px', width: '200px', border: '1px solid #ccc', borderRadius: '5px'}}
                 />
               </div>
-              <div style={{marginTop: '20px'}}>
-                <button
-                  onClick={saveProfileChanges}
-                  style={{padding: '10px 20px', marginRight: '10px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}}
-                >
+              <div className="profile-buttons">
+                <button className="btn-success" onClick={saveProfileChanges}>
                   Save Changes
                 </button>
-                <button
-                  onClick={cancelProfileEdit}
-                  style={{padding: '10px 20px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}}
-                >
+                <button className="btn-danger" onClick={cancelProfileEdit}>
                   Cancel
                 </button>
               </div>
-            </>
+            </div>
           ) : (
             <>
-              <h3>{user.name}</h3>
-              <p>Club: {user.clubName}</p>
-              <p>Level: {user.level}</p>
-              <p>Budget: ${(user.budget || 0).toLocaleString()}</p>
-              <p>Trophies: {user.trophies}</p>
-              <p>Matches Played: {user.matchesPlayed || 0}</p>
-              <p>Win Rate: {user.matchesPlayed ? Math.round((user.wins || 0) / user.matchesPlayed * 100) : 0}%</p>
-              <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px'}}>
-                <p><strong>Your User ID:</strong></p>
-                <p style={{fontSize: '12px', fontFamily: 'monospace', backgroundColor: 'white', padding: '5px', borderRadius: '3px', wordBreak: 'break-all', color: '#333', border: '1px solid #ddd'}}>{user.uid}</p>
-                <p style={{fontSize: '12px', color: '#666'}}>Share this ID with friends so they can add you!</p>
+              <div className="profile-info">
+                <h3>{user.name}</h3>
+                <p style={{textAlign: 'center', color: '#666', marginBottom: '25px'}}>
+                  Manager of {user.clubName}
+                </p>
               </div>
-              <button
-                onClick={startEditingProfile}
-                style={{padding: '10px 20px', marginTop: '20px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}}
-              >
-                Edit Profile
-              </button>
+
+              <div className="profile-stats">
+                <div className="profile-stat">
+                  <label>Level</label>
+                  <div className="value">{user.level || 1}</div>
+                </div>
+                <div className="profile-stat">
+                  <label>Budget</label>
+                  <div className="value">${(user.budget || 0).toLocaleString()}</div>
+                </div>
+                <div className="profile-stat">
+                  <label>Trophies</label>
+                  <div className="value">{user.trophies || 0} 🏆</div>
+                </div>
+                <div className="profile-stat">
+                  <label>Matches</label>
+                  <div className="value">{user.matchesPlayed || 0}</div>
+                </div>
+                <div className="profile-stat">
+                  <label>Win Rate</label>
+                  <div className="value">{user.matchesPlayed ? Math.round((user.wins || 0) / user.matchesPlayed * 100) : 0}%</div>
+                </div>
+              </div>
+
+              <div className="profile-user-id">
+                <strong>Your User ID:</strong>
+                <div className="user-id-code">{user.uid}</div>
+                <p style={{fontSize: '12px', color: '#6c757d', margin: '8px 0 0 0'}}>
+                  Share this ID with friends so they can add you!
+                </p>
+              </div>
+
+              <div className="profile-buttons">
+                <button className="btn-primary" onClick={startEditingProfile}>
+                  ✏️ Edit Profile
+                </button>
+              </div>
             </>
           )}
         </div>
       </div>
     ),
     friends: () => (
-      <div className="screen">
-        <h2>Friends & Requests</h2>
+      <div className="screen friends-container">
+        <div className="friends-header">
+          <h2>Friends & Requests</h2>
+        </div>
 
         {/* Friend Requests Section */}
         {friendRequests.length > 0 && (
-          <div style={{marginBottom: '20px'}}>
-            <h3 style={{color: '#333'}}>Pending Friend Requests ({friendRequests.length})</h3>
-            <div className="friend-requests">
+          <div className="section-card friend-requests-section">
+            <h3 className="section-title">
+              👥 Pending Friend Requests ({friendRequests.length})
+            </h3>
+            <div>
               {friendRequests.map(request => (
-                <div key={request.id} className="friend-request" style={{padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffeaa7', marginBottom: '10px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>
-                  <p style={{color: '#333', margin: '0 0 5px 0'}}><strong>{request.fromName}</strong> wants to be your friend</p>
-                  <p style={{fontSize: '12px', color: '#666', margin: '0 0 10px 0'}}>From: {request.from}</p>
-                  <button
-                    onClick={() => handleAcceptFriendRequest(request.id, request.from)}
-                    style={{padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', marginRight: '10px', cursor: 'pointer', fontWeight: 'bold'}}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => alert('Decline functionality not implemented yet')}
-                    style={{padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}
-                  >
-                    Decline
-                  </button>
+                <div key={request.id} className="friend-request-card">
+                  <div className="friend-request-info">
+                    <div className="friend-request-name">
+                      {request.fromName} wants to be your friend
+                    </div>
+                    <div className="friend-request-id">From: {request.from}</div>
+                  </div>
+                  <div className="friend-request-actions">
+                    <button
+                      className="btn-success"
+                      onClick={() => handleAcceptFriendRequest(request.id, request.from)}
+                    >
+                      ✓ Accept
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={() => alert('Decline functionality not implemented yet')}
+                    >
+                      ✗ Decline
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Friends List */}
-        <h3 style={{color: '#333'}}>My Friends ({friends.length})</h3>
+        {/* Friends List Section */}
+        <div className="section-card friends-list-section">
+          <h3 className="section-title">
+            🤝 My Friends ({friends.length})
+          </h3>
 
-        {/* Search Friends */}
-        {friends.length > 0 && (
-          <div style={{marginBottom: '15px'}}>
-            <input
-              type="text"
-              placeholder="🔍 Search friends by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                padding: '10px',
-                width: '100%',
-                maxWidth: '400px',
-                border: '1px solid #ced4da',
-                borderRadius: '5px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-        )}
-
-        <div className="friends-list">
-          {friends.length > 0 ? (
-            friends.filter(friendId => {
-              const friendName = friendsData[friendId] || (friendId.substring(0, 8) + '...');
-              return friendName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                     friendId.toLowerCase().includes(searchTerm.toLowerCase());
-            }).map(friendId => {
-              const friendName = friendsData[friendId] || (friendId.substring(0, 8) + '...');
-              return (
-                <div key={friendId} className="friend-item" style={{padding: '15px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', marginBottom: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>
-                  <div>
-                    <span style={{color: '#333', fontWeight: 'bold', fontSize: '16px'}}>{friendName}</span>
-                    <div style={{color: '#666', fontSize: '12px', marginTop: '2px'}}>ID: {friendId.substring(0, 12)}...</div>
-                  </div>
-                  <button
-                    style={{padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}
-                    onClick={() => handleChallengeFriend(friendId, friendName)}
-                  >
-                    ⚽ Challenge
-                  </button>
-                </div>
-              );
-            })
-          ) : (
-            <p style={{color: '#666', fontStyle: 'italic', textAlign: 'center', padding: '20px'}}>No friends yet. Add some friends to start playing together!</p>
+          {/* Search Friends */}
+          {friends.length > 0 && (
+            <div className="friends-search">
+              <input
+                type="text"
+                placeholder="🔍 Search friends by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
           )}
+
+          <div className="friends-grid">
+            {friends.length > 0 ? (
+              friends.filter(friendId => {
+                const friendName = friendsData[friendId] || (friendId.substring(0, 8) + '...');
+                return friendName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       friendId.toLowerCase().includes(searchTerm.toLowerCase());
+              }).map(friendId => {
+                const friendName = friendsData[friendId] || (friendId.substring(0, 8) + '...');
+                return (
+                  <div key={friendId} className="friend-card">
+                    <div className="friend-card-header">
+                      <div className="friend-avatar">
+                        {friendName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="friend-info">
+                        <div className="friend-name">{friendName}</div>
+                        <div className="friend-status">● Online</div>
+                      </div>
+                    </div>
+                    <div style={{fontSize: '12px', color: '#666', marginBottom: '10px'}}>
+                      ID: {friendId.substring(0, 12)}...
+                    </div>
+                    <div className="friend-actions">
+                      <button
+                        className="btn-challenge"
+                        onClick={() => handleChallengeFriend(friendId, friendName)}
+                      >
+                        ⚽ Challenge
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty-state">
+                <div className="empty-state-icon">👥</div>
+                <div className="empty-state-text">No friends yet</div>
+                <div className="empty-state-subtext">Add some friends to start playing together!</div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Add Friend Section */}
-        <div style={{marginTop: '20px', padding: '20px', backgroundColor: '#e9ecef', border: '1px solid #ced4da', borderRadius: '8px'}}>
-          <h4 style={{color: '#333', marginBottom: '10px'}}>Add a Friend</h4>
-          <p style={{fontSize: '14px', color: '#6c757d', marginBottom: '15px'}}>
+        <div className="section-card add-friend-section">
+          <h3 className="section-title">➕ Add a Friend</h3>
+          <div className="add-friend-help">
             Enter your friend's User ID. They can find their ID in their Profile tab.
-          </p>
-          <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+          </div>
+          <div className="add-friend-form">
             <input
               type="text"
               id="friendIdInput"
               placeholder="Enter friend's User ID"
-              style={{padding: '10px', flex: '1', border: '1px solid #ced4da', borderRadius: '5px', fontSize: '14px'}}
+              className="add-friend-input"
             />
             <button
+              className="btn-success"
               onClick={() => {
                 const friendId = document.getElementById('friendIdInput').value;
                 if (friendId) {
@@ -1277,7 +1319,6 @@ const FootballManagerPro = () => {
                   document.getElementById('friendIdInput').value = '';
                 }
               }}
-              style={{padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', whiteSpace: 'nowrap'}}
             >
               Send Request
             </button>
@@ -1477,6 +1518,43 @@ const FootballManagerPro = () => {
         <div className="header-info">
           <span>💰 ${(user.budget || 0).toLocaleString()}</span>
           <span>🏆 {user.trophies}</span>
+          <button
+            className="bell-btn"
+            onClick={() => setCurrentScreen('alerts')}
+            style={{
+              position: 'relative',
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '50%',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+          >
+            🔔
+            {(incomingMatches.length + friendRequests.length) > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '2px',
+                right: '2px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold'
+              }}>
+                {incomingMatches.length + friendRequests.length}
+              </span>
+            )}
+          </button>
           <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
@@ -1484,35 +1562,14 @@ const FootballManagerPro = () => {
       </header>
 
       <nav className="bottom-nav">
-        {Object.keys(screens).filter(screen => screen !== 'auth').map(screen => {
-          const notificationCount = screen === 'alerts' ? (incomingMatches.length + friendRequests.length) : 0;
+        {Object.keys(screens).filter(screen => screen !== 'auth' && screen !== 'alerts').map(screen => {
           return (
             <button
               key={screen}
               className={`nav-btn ${currentScreen === screen ? 'active' : ''}`}
               onClick={() => setCurrentScreen(screen)}
-              style={{position: 'relative'}}
             >
               {screen.charAt(0).toUpperCase() + screen.slice(1)}
-              {notificationCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-5px',
-                  right: '-5px',
-                  backgroundColor: '#ff4444',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold'
-                }}>
-                  {notificationCount}
-                </span>
-              )}
             </button>
           );
         })}
