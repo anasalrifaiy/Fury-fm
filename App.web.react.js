@@ -1525,7 +1525,51 @@ const FootballManagerPro = () => {
               </div>
             );
           })}
-          {squad.length === 0 && (
+
+          {/* Display players from formation who aren't already in squad */}
+          {Object.values(formationPlayers).filter(player =>
+            player && !squad.some(squadPlayer => squadPlayer.id === player.id)
+          ).map(player => {
+            const wasTrained = player.rating > (player.originalRating || player.rating);
+            const sellPrice = Math.floor(player.value * (wasTrained ? 0.9 : 0.85));
+
+            return (
+              <div key={`formation-${player.id}`} className="player-card" style={{border: '2px solid #007bff'}}>
+                <div className="player-info">
+                  <h4
+                    style={{cursor: 'pointer', color: '#007bff'}}
+                    onClick={() => openPlayerDetail(player)}
+                  >
+                    {player.name} <span style={{fontSize: '12px', color: '#007bff'}}>★ In Formation</span>
+                  </h4>
+                  <p>{player.position} • Rating: {player.rating}</p>
+                  <p>Value: ${(player.value || 0).toLocaleString()}</p>
+                  <p style={{fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)'}}>
+                    Sell for: ${sellPrice.toLocaleString()} {wasTrained && '(+5% trained bonus)'}
+                  </p>
+                </div>
+                <button
+                  className="sell-btn"
+                  onClick={() => sellPlayer(player)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    marginLeft: '10px'
+                  }}
+                >
+                  Sell Player
+                </button>
+              </div>
+            );
+          })}
+
+          {squad.length === 0 && Object.keys(formationPlayers).filter(key => formationPlayers[key]).length === 0 && (
             <p>No players in your squad. Go to Transfer Market to sign some players!</p>
           )}
         </div>
