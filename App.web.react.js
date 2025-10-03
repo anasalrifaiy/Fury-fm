@@ -527,15 +527,15 @@ const FootballManagerPro = () => {
 
   const handleForgotPassword = async (email) => {
     if (!email.trim()) {
-      alert('Please enter your email address');
+      showAlert('Please enter your email address', 'error');
       return;
     }
 
     const result = await resetPassword(email.trim());
     if (result.success) {
-      alert('Password reset email sent! Check your inbox and follow the instructions to reset your password.');
+      showAlert('Password reset email sent! Check your inbox and follow the instructions to reset your password.', 'success');
     } else {
-      alert(`Failed to send reset email: ${result.error}`);
+      showAlert(`Failed to send reset email: ${result.error}`, 'error');
     }
   };
 
@@ -544,9 +544,9 @@ const FootballManagerPro = () => {
     if (result.success) {
       // Set current match ID to start listening for acceptance
       setCurrentMatchId(result.matchId);
-      alert(`Challenge sent to ${friendName}! They will receive a notification. You'll be notified when they accept.`);
+      showAlert(`Challenge sent to ${friendName}! They will receive a notification. You'll be notified when they accept.`, 'success');
     } else {
-      alert(`Failed to send challenge: ${result.error}`);
+      showAlert(`Failed to send challenge: ${result.error}`, 'error');
     }
   };
 
@@ -819,7 +819,7 @@ const FootballManagerPro = () => {
                       }, {});
 
       if (!validateSquad(mySquad)) {
-        alert('You need exactly 11 players in your formation to start a match! Please go to the Formation tab and complete your squad.');
+        showAlert('You need exactly 11 players in your formation to start a match! Please go to the Formation tab and complete your squad.', 'error');
         setCurrentScreen('formation'); // Navigate to formation screen
         return;
       }
@@ -848,7 +848,7 @@ const FootballManagerPro = () => {
         }, {});
 
         if (!validateSquad(opponentSquad)) {
-          alert(`${opponentName} doesn't have a complete squad (11 players). Match cannot start.`);
+          showAlert(`${opponentName} doesn't have a complete squad (11 players). Match cannot start.`, 'error');
           return;
         }
 
@@ -893,10 +893,10 @@ const FootballManagerPro = () => {
       setCurrentMatchId(matchId); // Set current match ID for listener
       setCurrentScreen('match');
 
-      alert('Match accepted! Waiting for both players to be ready to start...');
+      showAlert('Match accepted! Waiting for both players to be ready to start...', 'success');
 
     } catch (error) {
-      alert(`Failed to start match: ${error.message}`);
+      showAlert(`Failed to start match: ${error.message}`, 'error');
     }
   };
 
@@ -904,9 +904,9 @@ const FootballManagerPro = () => {
     try {
       await updateMatchResult(matchId, { status: 'declined' });
       setIncomingMatches(prev => prev.filter(match => match.id !== matchId));
-      alert('Match declined');
+      showAlert('Match declined', 'info');
     } catch (error) {
-      alert(`Failed to decline match: ${error.message}`);
+      showAlert(`Failed to decline match: ${error.message}`, 'error');
     }
   };
 
@@ -1030,7 +1030,7 @@ const FootballManagerPro = () => {
       setMatchHistory(updatedHistory);
       localStorage.setItem(`matchHistory_${user.uid}`, JSON.stringify(updatedHistory));
 
-      alert(`Match completed!\n${matchSimulation.opponentName} ${matchSimulation.finalScore.away} - ${matchSimulation.finalScore.home} You\nWinner: ${winnerText}${rewardMessage}`);
+      showAlert(`Match completed! ${matchSimulation.opponentName} ${matchSimulation.finalScore.away} - ${matchSimulation.finalScore.home} You. Winner: ${winnerText}${rewardMessage}`, 'success');
 
       setIncomingMatches(prev => prev.filter(match => match.id !== matchSimulation.matchId));
       setMatchSimulation(null);
@@ -1039,7 +1039,7 @@ const FootballManagerPro = () => {
       setCurrentScreen('alerts');
 
     } catch (error) {
-      alert(`Failed to save match result: ${error.message}`);
+      showAlert(`Failed to save match result: ${error.message}`, 'error');
     }
   };
 
@@ -1127,9 +1127,9 @@ const FootballManagerPro = () => {
       const updatedUser = { ...user, budget: user.budget - player.value };
       saveSquadData(newSquad);
       saveUserData(updatedUser);
-      alert(`Successfully signed ${player.name} for $${player.value.toLocaleString()}!`);
+      showAlert(`Successfully signed ${player.name} for $${player.value.toLocaleString()}!`, 'success');
     } else {
-      alert(`Not enough budget! You need $${player.value.toLocaleString()} but only have $${user.budget.toLocaleString()}.`);
+      showAlert(`Not enough budget! You need $${player.value.toLocaleString()} but only have $${user.budget.toLocaleString()}.`, 'error');
     }
   };
 
@@ -1158,7 +1158,7 @@ const FootballManagerPro = () => {
       setFormationPlayers(newFormationPlayers);
       saveUserData(updatedUser);
 
-      alert(`Successfully sold ${player.name} for $${sellPrice.toLocaleString()}!`);
+      showAlert(`Successfully sold ${player.name} for $${sellPrice.toLocaleString()}!`, 'success');
     }
   };
 
@@ -1215,10 +1215,10 @@ const FootballManagerPro = () => {
       };
 
       await firestore().collection('users').doc(user.uid).collection('formations').doc('current').set(formationData);
-      alert('Formation saved successfully!');
+      showAlert('Formation saved successfully!', 'success');
     } catch (error) {
       console.error('Error saving formation:', error);
-      alert('Failed to save formation. Please try again.');
+      showAlert('Failed to save formation. Please try again.', 'error');
     }
   };
 
@@ -1232,13 +1232,13 @@ const FootballManagerPro = () => {
         const formationData = formationDoc.data();
         setFormation(formationData.formation);
         setFormationPlayers(formationData.formationPlayers);
-        alert('Formation loaded successfully!');
+        showAlert('Formation loaded successfully!', 'success');
       } else {
-        alert('No saved formation found.');
+        showAlert('No saved formation found.', 'info');
       }
     } catch (error) {
       console.error('Error loading formation:', error);
-      alert('Failed to load formation. Please try again.');
+      showAlert('Failed to load formation. Please try again.', 'error');
     }
   };
 
@@ -1324,9 +1324,9 @@ const FootballManagerPro = () => {
       saveUserData(updatedUser);
 
       setSelectedPlayer(updatedPlayer);
-      alert(`${skillName} improved to ${updatedPlayer.skills[skillName]}! Rating is now ${updatedPlayer.rating}.`);
+      showAlert(`${skillName} improved to ${updatedPlayer.skills[skillName]}! Rating is now ${updatedPlayer.rating}.`, 'success');
     } else {
-      alert(`Not enough budget! Training costs $${improvementCost.toLocaleString()}.`);
+      showAlert(`Not enough budget! Training costs $${improvementCost.toLocaleString()}.`, 'error');
     }
   };
 
@@ -1340,7 +1340,7 @@ const FootballManagerPro = () => {
     const updatedUser = { ...user, name: editName, clubName: editClubName };
     saveUserData(updatedUser);
     setEditingProfile(false);
-    alert('Profile updated successfully!');
+    showAlert('Profile updated successfully!', 'success');
   };
 
   const cancelProfileEdit = () => {
@@ -1841,19 +1841,19 @@ const FootballManagerPro = () => {
         <div className="match-options">
           <button
             className="match-btn"
-            onClick={() => alert('Realistic AI matches coming soon! Full match simulation with tactics will be available in the next update.')}
+            onClick={() => showAlert('Realistic AI matches coming soon! Full match simulation with tactics will be available in the next update.', 'info')}
           >
             Quick Match (Coming Soon)
           </button>
           <button
             className="match-btn"
-            onClick={() => alert('Tournament mode coming soon!')}
+            onClick={() => showAlert('Tournament mode coming soon!', 'info')}
           >
             Tournament
           </button>
           <button
             className="match-btn"
-            onClick={() => alert('Career mode coming soon!')}
+            onClick={() => showAlert('Career mode coming soon!', 'info')}
           >
             Career Mode
           </button>
@@ -1953,11 +1953,11 @@ const FootballManagerPro = () => {
                     className="btn-add-friend"
                     onClick={async () => {
                       if (friends.includes(manager.id)) {
-                        alert(`${manager.name} is already your friend!`);
+                        showAlert(`${manager.name} is already your friend!`, 'info');
                       } else {
                         const result = await sendFriendRequest(user.uid, manager.id, user.name);
                         if (result.success) {
-                          alert(`Friend request sent to ${manager.name}!`);
+                          showAlert(`Friend request sent to ${manager.name}!`, 'success');
                         } else {
                           showAlert(`Failed to send friend request: ${result.error}`, 'error');
                         }
@@ -2089,7 +2089,7 @@ const FootballManagerPro = () => {
                     </button>
                     <button
                       className="btn-danger"
-                      onClick={() => alert('Decline functionality not implemented yet')}
+                      onClick={() => showAlert('Decline functionality not implemented yet', 'info')}
                     >
                       ✗ Decline
                     </button>
@@ -2238,7 +2238,7 @@ const FootballManagerPro = () => {
                     Accept
                   </button>
                   <button
-                    onClick={() => alert('Decline functionality not implemented yet')}
+                    onClick={() => showAlert('Decline functionality not implemented yet', 'info')}
                     style={{padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}
                   >
                     Decline
@@ -2251,9 +2251,9 @@ const FootballManagerPro = () => {
 
         {/* No Notifications */}
         {incomingMatches.length === 0 && friendRequests.length === 0 && (
-          <div style={{textAlign: 'center', padding: '40px', color: '#666'}}>
-            <p style={{fontSize: '18px', marginBottom: '10px'}}>🔔 No new notifications</p>
-            <p>Friend requests and match challenges will appear here.</p>
+          <div className="no-notifications">
+            <p className="no-notifications-title">🔔 No new notifications</p>
+            <p className="no-notifications-subtitle">Friend requests and match challenges will appear here.</p>
           </div>
         )}
       </div>
