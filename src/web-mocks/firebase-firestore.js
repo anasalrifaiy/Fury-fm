@@ -59,6 +59,18 @@ const initDefaultUserData = (userId) => {
 
 const firestore = () => ({
   collection: (collectionName) => ({
+    add: async (data) => {
+      console.log(`Mock Firestore: Adding document to ${collectionName}:`, data);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate a unique ID for the new document
+      const docId = `${collectionName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const key = getStorageKey(collectionName, docId);
+      setToStorage(key, { ...data, id: docId });
+
+      return { id: docId };
+    },
+
     doc: (docId) => ({
       set: async (data) => {
         console.log(`Mock Firestore: Setting document ${docId} in ${collectionName}:`, data);
