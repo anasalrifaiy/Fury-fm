@@ -141,6 +141,17 @@ export const getUserFriends = async (userId) => {
   }
 };
 
+// Helper function to get all users for leaderboard
+export const getAllUsers = async () => {
+  try {
+    const snapshot = await db.collection('users').get();
+    const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    return { success: true, data: users };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 // Match System
 export const createMatch = async (player1Id, player2Id, player1Name, player2Name) => {
   try {

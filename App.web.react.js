@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './src/styles/web.css';
 import { loginUser, registerUser, logoutUser, onAuthStateChange, resetPassword } from './src/firebase/auth';
-import { createUserProfile, getUserProfile, updateUserProfile, saveUserSquad, getUserSquad, sendFriendRequest, getFriendRequests, acceptFriendRequest, getUserFriends, listenToFriendRequests, createMatch, getUserMatches, listenToMatches, updateMatchResult } from './src/firebase/database.web';
+import { createUserProfile, getUserProfile, updateUserProfile, saveUserSquad, getUserSquad, sendFriendRequest, getFriendRequests, acceptFriendRequest, getUserFriends, listenToFriendRequests, createMatch, getUserMatches, listenToMatches, updateMatchResult, getAllUsers } from './src/firebase/database.web';
 import firestore from './src/web-mocks/firebase-firestore';
 
 const FootballManagerPro = () => {
@@ -144,12 +144,16 @@ const FootballManagerPro = () => {
           setMatchHistory(JSON.parse(savedHistory));
         }
 
-        // Load all users for leaderboard using Firestore mock
+        // Load all users for leaderboard
         const loadAllUsers = async () => {
           try {
-            const usersCollection = await firestore().collection('users').get();
-            const users = usersCollection.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-            setAllUsers(users);
+            const result = await getAllUsers();
+            if (result.success) {
+              setAllUsers(result.data);
+              console.log('Loaded users for leaderboard:', result.data);
+            } else {
+              console.error('Error loading users for leaderboard:', result.error);
+            }
           } catch (error) {
             console.error('Error loading users for leaderboard:', error);
           }
@@ -1840,9 +1844,13 @@ const FootballManagerPro = () => {
     leaderboard: () => {
       const refreshLeaderboard = async () => {
         try {
-          const usersCollection = await firestore().collection('users').get();
-          const users = usersCollection.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-          setAllUsers(users);
+          const result = await getAllUsers();
+          if (result.success) {
+            setAllUsers(result.data);
+            console.log('Refreshed leaderboard with users:', result.data);
+          } else {
+            console.error('Error refreshing leaderboard:', result.error);
+          }
         } catch (error) {
           console.error('Error refreshing leaderboard:', error);
         }
