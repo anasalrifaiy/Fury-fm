@@ -273,6 +273,58 @@ const FootballManagerPro = () => {
     return () => clearInterval(pollInterval);
   }, [currentMatchId, user, isMatchPlaying, currentMinute, matchSimulation, formationPlayers, squad]);
 
+  // Auto-refresh data when switching to friends or leaderboard screens
+  useEffect(() => {
+    if (!user) return;
+
+    const loadScreenData = async () => {
+      try {
+        if (currentScreen === 'friends') {
+          // Reload friends and friend requests
+          const [friendsResult, requestsResult] = await Promise.all([
+            getUserFriends(user.uid),
+            getFriendRequests(user.uid)
+          ]);
+
+          if (friendsResult.success) {
+            setFriends(friendsResult.data);
+            console.log('Refreshed friends data:', friendsResult.data);
+
+            // Load friend names
+            const friendsNameData = {};
+            for (const friendId of friendsResult.data) {
+              const friendProfile = await getUserProfile(friendId);
+              if (friendProfile.success) {
+                friendsNameData[friendId] = friendProfile.data.name;
+              }
+            }
+            setFriendsNames(friendsNameData);
+          }
+
+          if (requestsResult.success) {
+            setFriendRequests(requestsResult.data);
+            console.log('Refreshed friend requests:', requestsResult.data);
+          }
+        }
+
+        if (currentScreen === 'leaderboard') {
+          // Reload all users for leaderboard
+          const result = await getAllUsers();
+          if (result.success) {
+            setAllUsers(result.data);
+            console.log('Refreshed leaderboard users:', result.data);
+          } else {
+            console.error('Error refreshing leaderboard:', result.error);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading screen data:', error);
+      }
+    };
+
+    loadScreenData();
+  }, [currentScreen, user]);
+
   // Helper function to calculate realistic player values based on rating
   const calculatePlayerValue = (rating, age = 25) => {
     let baseValue;
@@ -1890,8 +1942,8 @@ const FootballManagerPro = () => {
             </div>
           )}
         </div>
-      </div>
-    ),
+      );
+    },
     leaderboard: () => {
       const refreshLeaderboard = async () => {
         try {
@@ -1907,10 +1959,44 @@ const FootballManagerPro = () => {
         }
       };
 
+      // Combine current user with all other users for the leaderboard
+      const allLeaderboardUsers = [
+        // Current user with calculated points
+        {
+          id: user?.uid || '1',
+          name: user?.name || 'Player',
+          clubName: user?.clubName || 'My Club',
+          points: (user?.wins || 0) * 3 + (user?.draws || 0) * 1,
+          isCurrentUser: true,
+          level: user?.level || 1,
+          budget: user?.budget || 0,
+          trophies: user?.trophies || 0,
+          wins: user?.wins || 0,
+          draws: user?.draws || 0,
+          losses: user?.losses || 0,
+          squad: squad.slice(0, 11)
+        },
+        // Other users from database
+        ...allUsers.filter(otherUser => otherUser.uid !== user?.uid).map(otherUser => ({
+          id: otherUser.uid,
+          name: otherUser.name || 'Unknown Player',
+          clubName: otherUser.clubName || 'Unknown Club',
+          points: (otherUser.wins || 0) * 3 + (otherUser.draws || 0) * 1,
+          isCurrentUser: false,
+          level: otherUser.level || 1,
+          budget: otherUser.budget || 0,
+          trophies: otherUser.trophies || 0,
+          wins: otherUser.wins || 0,
+          draws: otherUser.draws || 0,
+          losses: otherUser.losses || 0,
+          squad: []
+        }))
+      ];
+
       // Sort leaderboard by points (wins*3 + draws*1) then by wins
-      const sortedManagers = [...leaderboardManagers].sort((a, b) => {
+      const sortedManagers = allLeaderboardUsers.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
-        return b.wins - a.wins;
+        return (b.wins || 0) - (a.wins || 0);
       });
 
       return (
@@ -2059,11 +2145,49 @@ const FootballManagerPro = () => {
         </div>
       </div>
     ),
-    friends: () => (
-      <div className="screen friends-container">
-        <div className="friends-header">
-          <h2>Friends & Requests</h2>
-        </div>
+    friends: () => {
+      const refreshFriendsData = async () => {
+        try {
+          const [friendsResult, requestsResult] = await Promise.all([
+            getUserFriends(user.uid),
+            getFriendRequests(user.uid)
+          ]);
+
+          if (friendsResult.success) {
+            setFriends(friendsResult.data);
+            console.log('Manual refresh - friends data:', friendsResult.data);
+
+            // Load friend names
+            const friendsNameData = {};
+            for (const friendId of friendsResult.data) {
+              const friendProfile = await getUserProfile(friendId);
+              if (friendProfile.success) {
+                friendsNameData[friendId] = friendProfile.data.name;
+              }
+            }
+            setFriendsNames(friendsNameData);
+          }
+
+          if (requestsResult.success) {
+            setFriendRequests(requestsResult.data);
+            console.log('Manual refresh - friend requests:', requestsResult.data);
+          }
+
+          showAlert('Friends data refreshed!', 'success');
+        } catch (error) {
+          console.error('Error refreshing friends data:', error);
+          showAlert('Failed to refresh friends data', 'error');
+        }
+      };
+
+      return (
+        <div className="screen friends-container">
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h2>Friends & Requests</h2>
+            <button onClick={refreshFriendsData} style={{padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer'}}>
+              🔄 Refresh
+            </button>
+          </div>
 
         {/* Friend Requests Section */}
         {friendRequests.length > 0 && (
