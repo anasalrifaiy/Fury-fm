@@ -1558,3 +1558,131 @@ body {
   font-size: 0.8rem;
   font-weight: bold;
 }
+
+/* Custom Alert Styles */
+.custom-alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.custom-alert {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  min-width: 300px;
+  margin: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: alertSlideIn 0.3s ease-out;
+}
+
+.custom-alert-content {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.custom-alert-message {
+  flex: 1;
+  color: white;
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.custom-alert-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.custom-alert-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Alert type styles */
+.custom-alert-success {
+  border-left: 4px solid #10b981;
+}
+
+.custom-alert-error {
+  border-left: 4px solid #ef4444;
+}
+
+.custom-alert-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.custom-alert-info {
+  border-left: 4px solid #3b82f6;
+}
+
+/* Alert type icons */
+.custom-alert-success .custom-alert-message::before {
+  content: '✅ ';
+  margin-right: 0.5rem;
+}
+
+.custom-alert-error .custom-alert-message::before {
+  content: '❌ ';
+  margin-right: 0.5rem;
+}
+
+.custom-alert-warning .custom-alert-message::before {
+  content: '⚠️ ';
+  margin-right: 0.5rem;
+}
+
+.custom-alert-info .custom-alert-message::before {
+  content: 'ℹ️ ';
+  margin-right: 0.5rem;
+}
+
+@keyframes alertSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile responsive alerts */
+@media (max-width: 480px) {
+  .custom-alert {
+    max-width: calc(100vw - 2rem);
+    min-width: calc(100vw - 2rem);
+  }
+
+  .custom-alert-content {
+    padding: 1rem;
+  }
+
+  .custom-alert-message {
+    font-size: 0.9rem;
+  }
+}

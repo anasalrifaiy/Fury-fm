@@ -21,40 +21,6 @@ const setToStorage = (key, data) => {
   }
 };
 
-// Initialize default user data if not exists
-const initDefaultUserData = (userId) => {
-  const userKey = getStorageKey('users', userId);
-  const existingData = getFromStorage(userKey);
-
-  if (!existingData) {
-    const defaultData = {
-      uid: userId,
-      name: 'Player',
-      clubName: 'My Club',
-      level: 1,
-      budget: 200000000,
-      trophies: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      matches: 0,
-      createdAt: new Date().toISOString(),
-      budgetUpgraded: true
-    };
-    setToStorage(userKey, defaultData);
-  } else {
-    // Check if existing user needs budget upgrade
-    if (!existingData.budgetUpgraded && existingData.budget) {
-      const upgradedData = {
-        ...existingData,
-        budget: existingData.budget + 50000000, // Add 50M to existing budget
-        budgetUpgraded: true
-      };
-      setToStorage(userKey, upgradedData);
-      console.log(`Budget upgraded for user ${userId}: ${existingData.budget} -> ${upgradedData.budget}`);
-    }
-  }
-};
 
 
 const firestore = () => ({
@@ -100,16 +66,6 @@ const firestore = () => ({
 
         const key = getStorageKey(collectionName, docId);
         const data = getFromStorage(key);
-
-        // Initialize user data if accessing a user document and it doesn't exist
-        if (collectionName === 'users' && !data) {
-          initDefaultUserData(docId);
-          const newData = getFromStorage(key);
-          return {
-            exists: !!newData,
-            data: () => newData || {}
-          };
-        }
 
         return {
           exists: !!data,

@@ -37,6 +37,7 @@ const FootballManagerPro = () => {
   const [matchHistory, setMatchHistory] = useState([]);
   const [matchReadyState, setMatchReadyState] = useState(null); // Track if both players are ready
   const [currentMatchId, setCurrentMatchId] = useState(null); // Track current match ID for listener
+  const [customAlert, setCustomAlert] = useState(null);
 
   // Firebase auth state listener
   useEffect(() => {
@@ -249,7 +250,7 @@ const FootballManagerPro = () => {
               setIsMatchPlaying(false);
 
               if (isChallenger) {
-                alert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`);
+                showAlert(`🎉 Your challenge was accepted! Get ready for the match against ${opponentName}!`, 'success');
               }
             }
           }
@@ -259,7 +260,7 @@ const FootballManagerPro = () => {
           if (currentReadyState.player1Ready && currentReadyState.player2Ready && !isMatchPlaying && currentMinute === 0) {
             clearInterval(pollInterval);
             setTimeout(() => {
-              alert('Both players are ready! Match starting now...');
+              showAlert('Both players are ready! Match starting now...', 'info');
               startMatch();
             }, 2000);
           }
@@ -463,12 +464,18 @@ const FootballManagerPro = () => {
     setSquad(squadData);
   };
 
+  // Custom alert function
+  const showAlert = (message, type = 'info') => {
+    setCustomAlert({ message, type });
+    setTimeout(() => setCustomAlert(null), 5000); // Auto-hide after 5 seconds
+  };
+
   const handleLogin = async (email, password) => {
     const result = await loginUser(email, password);
     if (result.success) {
       // Firebase auth state listener will handle the login flow
     } else {
-      alert(`Login failed: ${result.error}`);
+      showAlert(`Login failed: ${result.error}`, 'error');
     }
   };
 
@@ -477,7 +484,7 @@ const FootballManagerPro = () => {
     if (result.success) {
       // Firebase auth state listener will handle the registration flow
     } else {
-      alert(`Registration failed: ${result.error}`);
+      showAlert(`Registration failed: ${result.error}`, 'error');
     }
   };
 
@@ -486,21 +493,21 @@ const FootballManagerPro = () => {
     if (result.success) {
       // Firebase auth state listener will handle the logout flow
     } else {
-      alert(`Logout failed: ${result.error}`);
+      showAlert(`Logout failed: ${result.error}`, 'error');
     }
   };
 
   const handleSendFriendRequest = async (friendId) => {
     if (!friendId.trim()) {
-      alert('Please enter a valid user ID');
+      showAlert('Please enter a valid user ID', 'warning');
       return;
     }
 
     const result = await sendFriendRequest(user.uid, friendId.trim(), user.name);
     if (result.success) {
-      alert('Friend request sent successfully!');
+      showAlert('Friend request sent successfully!', 'success');
     } else {
-      alert(`Failed to send friend request: ${result.error}`);
+      showAlert(`Failed to send friend request: ${result.error}`, 'error');
     }
   };
 
@@ -512,9 +519,9 @@ const FootballManagerPro = () => {
       if (friendsResult.success) {
         setFriends(friendsResult.data);
       }
-      alert('Friend request accepted!');
+      showAlert('Friend request accepted!', 'success');
     } else {
-      alert(`Failed to accept friend request: ${result.error}`);
+      showAlert(`Failed to accept friend request: ${result.error}`, 'error');
     }
   };
 
@@ -1952,7 +1959,7 @@ const FootballManagerPro = () => {
                         if (result.success) {
                           alert(`Friend request sent to ${manager.name}!`);
                         } else {
-                          alert(`Failed to send friend request: ${result.error}`);
+                          showAlert(`Failed to send friend request: ${result.error}`, 'error');
                         }
                       }
                     }}
@@ -2701,6 +2708,23 @@ const FootballManagerPro = () => {
             <button className="close-btn" onClick={() => setShowManagerModal(false)}>
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alert Component */}
+      {customAlert && (
+        <div className="custom-alert-overlay">
+          <div className={`custom-alert custom-alert-${customAlert.type}`}>
+            <div className="custom-alert-content">
+              <span className="custom-alert-message">{customAlert.message}</span>
+              <button
+                className="custom-alert-close"
+                onClick={() => setCustomAlert(null)}
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
       )}
