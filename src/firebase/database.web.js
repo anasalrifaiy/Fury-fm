@@ -379,9 +379,29 @@ export const updateMatchResult = async (matchId, result) => {
   }
 };
 
-// Real-time listeners (simplified for web mock)
+// Real-time listeners (simplified for web mock with cross-tab sync)
 export const listenToFriendRequests = (userId, callback) => {
-  // For web version, use polling instead of real-time listeners
+  // Set up BroadcastChannel listener for real-time updates
+  const broadcastChannel = new BroadcastChannel('firestore-sync');
+
+  const handleStorageUpdate = async (event) => {
+    if (event.data.type === 'storage-update' &&
+        event.data.key.includes('friendRequests')) {
+      // Friend request data changed, refresh the list
+      try {
+        const result = await getFriendRequests(userId);
+        if (result.success) {
+          callback(result.data);
+        }
+      } catch (error) {
+        console.warn('Error refreshing friend requests:', error);
+      }
+    }
+  };
+
+  broadcastChannel.addEventListener('message', handleStorageUpdate);
+
+  // Also poll every 5 seconds as backup
   const interval = setInterval(async () => {
     try {
       const result = await getFriendRequests(userId);
@@ -391,13 +411,44 @@ export const listenToFriendRequests = (userId, callback) => {
     } catch (error) {
       console.warn('Error polling friend requests:', error);
     }
-  }, 2000);
+  }, 5000);
 
-  return () => clearInterval(interval);
+  return () => {
+    clearInterval(interval);
+    broadcastChannel.removeEventListener('message', handleStorageUpdate);
+    broadcastChannel.close();
+  };
 };
 
 export const listenToMatches = (userId, callback) => {
-  // For web version, use polling instead of real-time listeners
+  // Set up BroadcastChannel listener for real-time updates
+  const broadcastChannel = new BroadcastChannel('firestore-sync');
+
+  const handleStorageUpdate = async (event) => {
+    if (event.data.type === 'storage-update' &&
+        event.data.key.includes('matches')) {
+      // Match data changed, refresh the list
+      try {
+        const snapshot = await db.collection('matches').get();
+        const matches = [];
+
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.player2 === userId && data.status === 'pending') {
+            matches.push({ id: doc.id, ...data });
+          }
+        });
+
+        callback(matches);
+      } catch (error) {
+        console.warn('Error refreshing matches:', error);
+      }
+    }
+  };
+
+  broadcastChannel.addEventListener('message', handleStorageUpdate);
+
+  // Also poll every 5 seconds as backup
   const interval = setInterval(async () => {
     try {
       const snapshot = await db.collection('matches').get();
@@ -414,7 +465,11 @@ export const listenToMatches = (userId, callback) => {
     } catch (error) {
       console.warn('Error polling matches:', error);
     }
-  }, 2000);
+  }, 5000);
 
-  return () => clearInterval(interval);
+  return () => {
+    clearInterval(interval);
+    broadcastChannel.removeEventListener('message', handleStorageUpdate);
+    broadcastChannel.close();
+  };
 };
