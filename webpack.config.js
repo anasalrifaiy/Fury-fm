@@ -10,7 +10,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'web-build'),
     filename: 'bundle.js',
-    publicPath: '/',
+    publicPath: './',
   },
   resolve: {
     alias: {
