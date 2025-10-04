@@ -38,6 +38,7 @@ const FootballManagerPro = () => {
   const [matchReadyState, setMatchReadyState] = useState(null); // Track if both players are ready
   const [currentMatchId, setCurrentMatchId] = useState(null); // Track current match ID for listener
   const [customAlert, setCustomAlert] = useState(null);
+  const [previousFriendRequestCount, setPreviousFriendRequestCount] = useState(0);
 
   // Firebase auth state listener
   useEffect(() => {
@@ -131,12 +132,26 @@ const FootballManagerPro = () => {
 
         // Set up real-time friend request listener
         const unsubscribeRequests = listenToFriendRequests(firebaseUser.uid, (requests) => {
-          setFriendRequests(requests);
+          setFriendRequests(prevRequests => {
+            // Show alert if new friend requests arrived
+            if (requests.length > prevRequests.length) {
+              const newCount = requests.length - prevRequests.length;
+              showAlert(`You have ${newCount} new friend request${newCount > 1 ? 's' : ''}!`, 'info');
+            }
+            return requests;
+          });
         });
 
         // Set up real-time match challenge listener
         const unsubscribeMatches = listenToMatches(firebaseUser.uid, (matches) => {
-          setIncomingMatches(matches);
+          setIncomingMatches(prevMatches => {
+            // Show alert if new match challenges arrived
+            if (matches.length > prevMatches.length) {
+              const newCount = matches.length - prevMatches.length;
+              showAlert(`You have ${newCount} new match challenge${newCount > 1 ? 's' : ''}!`, 'info');
+            }
+            return matches;
+          });
         });
 
         // Load match history from localStorage

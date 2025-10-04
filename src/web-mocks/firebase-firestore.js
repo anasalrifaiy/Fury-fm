@@ -1,5 +1,8 @@
-// Web mock for Firebase Firestore with localStorage persistence
+// Web mock for Firebase Firestore with localStorage persistence and cross-tab sync
 const STORAGE_PREFIX = 'firestore_';
+
+// BroadcastChannel for cross-tab communication
+const broadcastChannel = new BroadcastChannel('firestore-sync');
 
 const getStorageKey = (collectionName, docId) => `${STORAGE_PREFIX}${collectionName}_${docId}`;
 
@@ -16,6 +19,12 @@ const getFromStorage = (key) => {
 const setToStorage = (key, data) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    // Notify other tabs about the change
+    broadcastChannel.postMessage({
+      type: 'storage-update',
+      key: key,
+      data: data
+    });
   } catch (error) {
     console.warn('Error saving to storage:', error);
   }
