@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "140944928919",
+    "firebase_url": "https://fury-fm-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "fury-fm",
+    "storage_bucket": "fury-fm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140944928919:android:d3b4173321c3c00f9b39d2",
+        "android_client_info": {
+          "package_name": "furyfm.anaszrock.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALJLCHcHhhdQqurVqZPVNkZ0IGFVFp338"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
